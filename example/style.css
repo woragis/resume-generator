@@ -1,0 +1,196 @@
+:root {
+  --bg: #ffffff;
+  --muted: #6b7280;
+  --accent: #0f172a;
+  --accent-2: #0ea5a4;
+  --section-accent: rgba(14,165,164,0.12);
+  --section-odd: #fbfcfd;
+  --pad: 18px;
+  --gap: 14px;
+  --radius: 6px;
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  font-family:
+    Inter,
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    Roboto,
+    'Helvetica Neue',
+    Arial;
+  background: var(--bg);
+  color: #0b1220;
+  margin: 0;
+  padding: 28px;
+}
+.page {
+  max-width: 900px;
+  margin: 0 auto 24px auto;
+  background: #fff;
+  box-shadow: 0 6px 20px rgba(10, 15, 25, 0.06);
+  border-radius: 8px;
+}
+.header {
+  padding: 18px 18px 12px 18px;
+  border-bottom: 1px solid #e6edf0;
+}
+.header.small {
+  padding: 10px 18px;
+}
+.name {
+  font-size: 28px;
+  font-weight: 700;
+}
+.name.small {
+  font-size: 14px;
+}
+.title {
+  color: var(--muted);
+  margin-top: 6px;
+}
+.contact {
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 13px;
+}
+.contact a {
+  color: var(--accent-2);
+  text-decoration: none;
+}
+
+.grid {
+  display: block;
+  padding: 18px;
+}
+
+/* Two-column container for page 1 left/right flow */
+.summary-row {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: var(--gap);
+  align-items: start;
+}
+.summary-row .area-summary { grid-column: 1 / 9; }
+.summary-row .area-skills { grid-column: 9 / 13; }
+
+/* Make each section self-contained: internal 12-column grid if needed */
+.section { display: block; }
+.section .inner { display: grid; grid-template-columns: repeat(12, 1fr); gap:8px; }
+.area-summary .inner p, .area-summary h3 { grid-column: 1 / 9; }
+  .section { display: block; padding:12px; border-radius:6px; background:transparent; margin-bottom:14px; border-left:4px solid transparent; }
+  .section .inner { display: grid; grid-template-columns: repeat(12, 1fr); gap:8px; }
+  .area-summary .inner p, .area-summary h3 { grid-column: 1 / 9; }
+  .area-skills { background: #f8fafb; padding: 12px; border-radius: 6px; border-left-color: var(--accent-2); }
+  .area-skills .skill-group { margin-bottom:10px }
+  .area-experience { display:block; width:100%; }
+  .area-experience .role, .area-projects .project { grid-column: 1 / 13; }
+  .area-projects-highlight .project { grid-column: 1 / 13; }
+  .area-projects-highlight ul { margin-left:18px }
+
+  /* visual accents for sections */
+  .section h3{ display:inline-block; padding:6px 10px; border-radius:6px; background:transparent; color:var(--accent); }
+  .section:nth-of-type(odd){ background: var(--section-odd); }
+  .section { border-left-color: var(--section-accent); }
+
+  /* stronger accent for skills and projects highlight */
+  .area-projects-highlight{ background: linear-gradient(90deg, rgba(14,165,164,0.03), rgba(255,255,255,0)); border-left-color: rgba(14,165,164,0.08); }
+  .area-projects-highlight .muted{ color: #0b6b66 }
+
+/* enforce page break for print/PDF */
+.page {
+  page-break-after: always;
+}
+.page:last-child {
+  page-break-after: auto;
+}
+
+h3 {
+  margin: 0 0 8px 0;
+  font-size: 14px;
+  color: #0b1220;
+}
+p {
+  margin: 0 0 10px 0;
+  line-height: 1.35;
+}
+ul {
+  margin: 8px 0 14px 18px;
+}
+
+.skills .chips,
+.skill-group .chips {
+  font-size: 13px;
+  color: var(--muted);
+}
+.skill-group {
+  margin-bottom: 10px;
+}
+
+.role {
+  margin-bottom: 14px;
+}
+.role-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.company {
+  font-weight: 600;
+}
+.dates {
+  color: var(--muted);
+  font-size: 13px;
+}
+.role-summary {
+  margin: 6px 0;
+}
+
+.project {
+  margin-bottom: 10px;
+}
+.muted {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+@media (max-width: 800px) {
+  .grid {
+    grid-template-columns: repeat(1, 1fr);
+  }
+  .area-summary,
+  .area-experience,
+  .area-education {
+    grid-column: 1/2;
+  }
+  .area-skills,
+  .area-projects,
+  .area-extras,
+  .area-certs,
+  .area-oss {
+    grid-column: 1/2;
+  }
+}
+
+/* PAGE 1 specific placements (explicit rows) */
+/* remove explicit per-row placements; sections are self-contained now */
+
+/* PAGE 2 placements removed — sections are self-contained and manage their own layout */
+
+/* Minor tweaks for compact header on page 2 */
+.header.small .name.small {
+  font-weight: 600;
+}
+
+/* print friendly */
+@media print {
+  body {
+    padding: 0;
+  }
+  .page {
+    box-shadow: none;
+    max-width: 100%;
+  }
+}

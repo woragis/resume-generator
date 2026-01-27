@@ -1,0 +1,247 @@
+<!doctype html>
+<html
+  lang="en"
+  class="theme-cool"
+>
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width,initial-scale=1"
+    />
+    <title>Jezreel de Andrade — Backend Engineer (Two-column test)</title>
+    <link
+      rel="stylesheet"
+      href="style_two_column.css"
+    />
+  </head>
+  <body>
+    <div class="page">
+      <header class="header">
+        <div class="name">Jezreel de Andrade</div>
+        <div class="meta">
+          Backend Engineer — Go • Remote • jezreel@example.com •
+          github.com/jezreel
+        </div>
+      </header>
+
+      <div class="visually-hidden">
+        Backend Engineer, Go, gRPC, Kubernetes, Docker, PostgreSQL, Redis, GCP,
+        Prometheus
+      </div>
+
+      <div class="layout">
+        <main class="main">
+          <section class="summary">
+            <h2>Professional Summary</h2>
+            <p>
+              Backend engineer with 6+ years building scalable Go services and
+              data pipelines. Focused on performance, reliability, and API
+              design.
+            </p>
+          </section>
+
+          <section class="snapshot">
+            <h3>Tech Snapshot</h3>
+            <div>Go · gRPC · PostgreSQL · Kafka · Kubernetes · Prometheus</div>
+
+            <h3>Top Achievements</h3>
+            <ul class="achievements">
+              <li>
+                Reduced billing batch runtime from hours to &lt;10 minutes and
+                cut failures by ~90%.
+              </li>
+              <li>
+                Cut API p95 latency 35% through targeted profiling and DB
+                tuning.
+              </li>
+              <li>
+                Led containerization and CI/CD on GKE; improved deployment
+                frequency and reduced MTTR by ~50%.
+              </li>
+            </ul>
+
+            <h3>Selected Projects</h3>
+            <ul class="selected-projects">
+              <li>
+                <a href="#real-time-billing">Real-time Billing Service</a> —
+                expanded case study on page 2.
+              </li>
+              <li>
+                <a href="#metrics-collector">Metrics Collector</a> —
+                instrumentation & dashboards (page 2).
+              </li>
+            </ul>
+          </section>
+
+          <section class="experience">
+            <h2>Experience</h2>
+            <div class="role">
+              <div class="role-head">
+                Acme Tech — Senior Backend Engineer | 2020–Present
+              </div>
+              <ul>
+                <li>
+                  Built Go microservices (gRPC/REST) using grpc-go and chi;
+                  optimized handlers and DB queries (indexes and batching),
+                  cutting API latency 35% (p95).
+                </li>
+                <li>
+                  Led containerization on GKE with Helm and GitHub Actions;
+                  improved deployment frequency and reduced incident recovery
+                  time 50%.
+                </li>
+              </ul>
+            </div>
+
+            <div class="role">
+              <div class="role-head">
+                Nimbus Labs — Backend Engineer | 2017–2020
+              </div>
+              <ul>
+                <li>
+                  Implemented event processing pipelines in Go using Kafka and
+                  worker pools, handling 10k+ events/sec with backpressure and
+                  backoff.
+                </li>
+                <li>
+                  Added distributed tracing (OpenTelemetry) and defined SLOs;
+                  tuned alerts and dashboards, reducing MTTD by 40%.
+                </li>
+              </ul>
+            </div>
+
+            <div class="leadership">
+              <div class="role-head">Leadership &amp; Process</div>
+              <div>
+                Mentored 5 engineers and led on-call rotation; established
+                GitHub Actions CI/CD and runbooks, and collaborated with
+                SRE/product on SLAs and observability, reducing incident MTTR by
+                ~25%.
+              </div>
+            </div>
+          </section>
+
+          <!-- Projects moved to page 2 for expanded case studies -->
+
+          <section class="education">
+            <h2>Education</h2>
+            <div>BSc Computer Science — University (2015)</div>
+          </section>
+        </main>
+
+        <!-- Sidebar removed per preference; skills/certs/oss/extras moved to page 2 -->
+      </div>
+
+      <footer class="foot">References available on request</footer>
+    </div>
+
+    <!-- Page 2: Projects, Publications, Skills, Certifications, OSS, Extras -->
+    <div class="page">
+      <header class="header">
+        <div class="name">Jezreel de Andrade</div>
+        <div class="meta">Page 2 — Project case studies & publications</div>
+      </header>
+      <div class="layout">
+        <main class="main">
+          <section class="projects">
+            <h2>Projects — Case Studies</h2>
+            <div
+              class="project"
+              id="real-time-billing"
+            >
+              <div class="proj-title">
+                <a
+                  href="https://github.com/jezreel/real-time-billing"
+                  target="_blank"
+                  rel="noopener"
+                  >Real-time Billing Service</a
+                >
+                — Go, gRPC, PostgreSQL, Kafka
+              </div>
+              <div class="proj-desc">
+                Built idempotent job workers and batching; reduced billing batch
+                runtime from hours to <10 minutes and lowered failures by 90%.
+                Scaled to ~2M transactions/day using gRPC services, PostgreSQL
+                partitioning, and Kafka for eventing. Key challenges: ensuring
+                idempotency across retries, maintaining strong consistency for
+                billing state, and elastic scaling of workers.
+              </div>
+              <ul>
+                <li>
+                  Designed idempotent worker protocol and at-least-once delivery
+                  handling.
+                </li>
+                <li>
+                  Introduced partitioned schemas and VACUUM tuning to keep write
+                  latency low.
+                </li>
+                <li>
+                  Implemented metrics and alerting to ensure SLA adherence.
+                </li>
+              </ul>
+            </div>
+            <div
+              class="project"
+              id="metrics-collector"
+            >
+              <div class="proj-title">
+                <a
+                  href="https://github.com/jezreel/metrics-collector"
+                  target="_blank"
+                  rel="noopener"
+                  >Metrics Collector</a
+                >
+                — Go, Prometheus, Grafana
+              </div>
+              <div class="proj-desc">
+                Lightweight collector and dashboards to surface service health;
+                tuned alerts and improved SLO adherence. Implemented Prometheus
+                instrumentation and Grafana dashboards; reduced false-positive
+                alerts by ~30%.
+              </div>
+              <ul>
+                <li>
+                  Added OpenMetrics endpoints and standardized instrumentation
+                  libraries across services.
+                </li>
+                <li>
+                  Built Grafana dashboards and maintained alert runbooks to
+                  reduce noise.
+                </li>
+              </ul>
+            </div>
+          </section>
+
+          <section class="publications">
+            <h2>Publications</h2>
+            <ul>
+              <li>
+                "Scaling Event Processing at Nimbus Labs", Proceedings of
+                Distributed Systems Meetups (2020) — link available on request
+              </li>
+              <li>
+                "Practical Observability with OpenTelemetry", Talk at Backend
+                Conf (2019)
+              </li>
+              <li>
+                Additional papers and talks available on GitHub and personal
+                site.
+              </li>
+            </ul>
+          </section>
+
+          <section class="education">
+            <h2>Certifications & Extras</h2>
+            <div>Google Cloud Certified (2021), CKA (2022), AWS Dev (2020)</div>
+            <div style="margin-top: 8px">
+              English (fluent) · Portuguese (native) · Interests: distributed
+              systems, cycling
+            </div>
+          </section>
+        </main>
+      </div>
+      <footer class="foot">References available on request</footer>
+    </div>
+  </body>
+</html>

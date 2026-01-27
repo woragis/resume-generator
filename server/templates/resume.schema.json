@@ -81,8 +81,31 @@
       "type": "array",
       "items": { "type": "string", "minLength": 40 }
     },
-    "certifications": { "type": "array", "items": { "type": "string" } },
-    "extras": { "type": "string", "maxLength": 140 }
+    "certifications": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string" },
+          "issuer": { "type": "string" },
+          "date": { "type": "string", "format": "date" },
+          "url": { "type": "string", "format": "uri" },
+          "description": { "type": "string", "maxLength": 140 }
+        },
+        "required": ["name"]
+      }
+    },
+    "extras": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "category": { "type": "string" },
+          "text": { "type": "string", "maxLength": 140 }
+        },
+        "required": ["category", "text"]
+      }
+    }
   },
   "required": ["meta", "summary", "snapshot", "experience", "projects"]
 }

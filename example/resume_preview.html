@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width,initial-scale=1"
+    />
+    <title>Resume Preview — Jezreel Veloso</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="style.css"
+    />
+  </head>
+  <body>
+    <div class="page page-1">
+      <header class="header">
+        <div class="name">Jezreel Veloso</div>
+        <div class="title">Senior Backend Engineer</div>
+        <div class="contact compact">
+          São Paulo, BR •
+          <a href="mailto:jezreel.veloso@gmail.com">jezreel.veloso@gmail.com</a>
+        </div>
+      </header>
+
+      <main class="grid grid-page1">
+        <main class="grid">
+          <!-- Top row: summary (left) and skills (right) -->
+          <div class="summary-row">
+            <section class="area-summary section" aria-label="Summary">
+              <h3>Professional Summary</h3>
+              <p>Backend engineer with 10+ years building scalable distributed systems. Experienced in Go, Kubernetes, Postgres and designing reliable APIs that serve millions of requests per day. Focused on fault tolerance, observability and cost-efficient architecture.</p>
+            </section>
+
+            <aside class="area-skills section" aria-label="Skills">
+              <h3>Key Skills</h3>
+              <div class="skill-group"><strong>Languages</strong><div class="chips">Go · Python · SQL</div></div>
+              <div class="skill-group"><strong>Frameworks</strong><div class="chips">gRPC · Kubernetes · Docker</div></div>
+              <div class="skill-group"><strong>Data</strong><div class="chips">Postgres · Redis</div></div>
+              <div class="skill-group"><strong>Cloud</strong><div class="chips">GCP · AWS</div></div>
+            </aside>
+          </div>
+
+          <!-- Experience uses full width below summary/skills -->
+          <section class="area-experience section" aria-label="Experience">
+            <h3>Experience</h3>
+            <div class="role">
+              <div class="role-head"><div class="company">Acme Systems — Senior Backend Engineer</div><div class="dates">2020 — Present</div></div>
+              <p class="role-summary">Led the payments microservice team serving 1M+ users; focused on reliability and efficiency.</p>
+              <ul>
+                <li>Reduced median latency by 35% and infrastructure costs by 18% via pipeline and caching improvements.</li>
+                <li>Established SLO-driven monitoring and cut P99 incidents by 40%.</li>
+                <li>Improved incident response and engineering mentorship.</li>
+              </ul>
+            </div>
+
+            <div class="role">
+              <div class="role-head"><div class="company">BetaCloud — Backend Engineer</div><div class="dates">2016 — 2020</div></div>
+              <p class="role-summary">Contributed to core backend services and led the migration toward microservices.</p>
+              <ul>
+                <li>Built Go services (REST/gRPC) and added structured logging and tracing.</li>
+                <li>Introduced migration and feature-flag processes, reducing rollback frequency.</li>
+              </ul>
+            </div>
+          </section>
+
+          <section class="area-projects-highlight section" aria-label="Projects (highlight)">
+            <h3>Projects (highlight)</h3>
+            <div class="project">
+              <strong>Resume Generator</strong>
+              <div class="muted">Go · Chromedp · Docker · Postgres · Redis</div>
+              <p>This project is a production-ready resume rendering pipeline: clients submit JSON profiles, the service synthesises a templated HTML resume and uses headless Chromium to produce high-fidelity PDFs. The system supports concurrent job processing, retries, and stores artifacts on disk and per-user folders.</p>
+              <ul>
+                <li>Scaled to handle 100+ concurrent render jobs with minimal memory footprint using Chromedp and a small worker pool.</li>
+                <li>Artifacts stored under a predictable host-mounted path for easy retrieval and auditing.</li>
+                <li>Includes observability: structured logs, basic metrics and graceful error handling with retry/backoff.</li>
+                <li>Designed template system for easy theme and layout changes (single HTML + CSS template).</li>
+              </ul>
+            </div>
+          </section>
+        </main>
+        >
+          <h3>Projects (highlight)</h3>
+          <div class="project">
+            <strong>Resume Generator</strong>
+            <div class="muted">Go · Chromedp · Docker</div>
+            <p>
+              Service that renders HTML to PDF using headless Chromium;
+              integrated with Postgres and Redis for job orchestration.
+            </p>
+          </div>
+        </section>
+            <h3>Projects (highlight)</h3>
+            <div class="project">
+              <strong>Resume Generator</strong>
+              <div class="muted">Go · Chromedp · Docker · Postgres · Redis</div>
+              <p>This project is a production-ready resume rendering pipeline: clients submit JSON profiles, the service synthesises a templated HTML resume and uses headless Chromium to produce high-fidelity PDFs. The system supports concurrent job processing, retries, and stores artifacts on disk and per-user folders.</p>
+              <ul>
+                <li>Scaled to handle 100+ concurrent render jobs with minimal memory footprint using Chromedp and a small worker pool.</li>
+                <li>Artifacts stored under a predictable host-mounted path for easy retrieval and auditing.</li>
+                <li>Includes observability: structured logs, basic metrics and graceful error handling with retry/backoff.</li>
+                <li>Designed template system for easy theme and layout changes (single HTML + CSS template).</li>
+              </ul>
+            </div>
+      </main>
+    </div>
+
+    <div class="page page-2">
+      <header class="header small">
+        <div class="name small">Jezreel Veloso — Continued</div>
+      </header>
+      <main class="grid">
+        <section
+          class="area-experience-continued section"
+          aria-label="Experience (continued)"
+        >
+          <h3>Experience (continued)</h3>
+          <div class="role">
+            <div class="role-head">
+              <div class="company">Gamma Labs — Software Engineer</div>
+              <div class="dates">2012 — 2016</div>
+            </div>
+            <ul>
+              <li>
+                Worked on core backend systems, focusing on reliability and
+                incremental deploys.
+              </li>
+            </ul>
+          </div>
+          <div class="role">
+            <div class="role-head">
+              <div class="company">DeltaSoft — Junior Engineer</div>
+              <div class="dates">2010 — 2012</div>
+            </div>
+            <ul>
+              <li>Contributed to backend services and test automation.</li>
+            </ul>
+          </div>
+        </section>
+
+        <section
+          class="area-projects-detail section"
+          aria-label="Projects (details)"
+        >
+          <h3>Projects (details)</h3>
+          <div class="project">
+            <strong>Resume Generator</strong>
+            <div class="muted">Go · Chromedp · Docker</div>
+            <p>
+              Service that renders HTML to PDF using headless Chromium;
+              integrated with Postgres and Redis for job orchestration.
+              Implemented robust retry and observability, handling 100+
+              concurrent jobs.
+            </p>
+          </div>
+          <div class="project">
+            <strong>Payments Pipeline</strong>
+            <div class="muted">Go · Kafka · Postgres</div>
+            <p>
+              Streaming pipeline for payments processing with end-to-end tracing
+              and idempotency guarantees.
+            </p>
+          </div>
+        </section>
+
+        <section
+          class="area-education section"
+          aria-label="Education"
+        >
+          <h3>Education</h3>
+          <p>B.Sc. Computer Science — University of São Paulo (2012)</p>
+        </section>
+
+        <section
+          class="area-certs section"
+          aria-label="Certifications"
+        >
+          <h3>Certifications</h3>
+          <ul>
+            <li>AWS Certified Solutions Architect — 2022</li>
+            <li>Google Cloud: Professional Data Engineer — 2021</li>
+          </ul>
+        </section>
+
+        <section
+          class="area-oss section"
+          aria-label="Open Source & Talks"
+        >
+          <h3>Open Source & Talks</h3>
+          <p>
+            Maintainer of several Go libraries; speaker at meetups on
+            observability and SRE.
+          </p>
+        </section>
+
+        <section
+          class="area-extras section"
+          aria-label="Extras"
+        >
+          <h3>Extras</h3>
+          <p>Languages: English (Fluent), Portuguese (Native)</p>
+          <p>Interests: Distributed systems, observability, mentoring</p>
+        </section>
+      </main>
+    </div>
+  </body>
+</html>

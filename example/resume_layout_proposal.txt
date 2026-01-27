@@ -1,0 +1,56 @@
+Two-column Resume Layout Proposal (ASCII form)
+
+Goal: Maximize scannability for hiring managers while staying ATS-friendly and PDF-printable.
+
+Suggested DOM order (keep linear for ATS):
+1) Header (name, title, contact, one link)
+2) Summary (1–2 short sentences)
+3) Main + Sidebar wrapper (main first in DOM, aside second)
+
+ASCII form (visual mockup):
+
++----------------------------------------------------------------+
+|                           Header                                 |
+|  Name — Title • Location • email • link                          |
++----------------------------------------------------------------+
+| Sidebar (240px) |                          Main (content)        |
+|-----------------|------------------------------------------------|
+| Contact (compact)| Summary: 1–2 sentences                        |
+| Skills (chips)   | Experience                                    |
+| - Languages      | - Company — Title | dates                      |
+| - Infra          |   • Technical achievement (what/tech)          |
+| - Datastores     |   • Impact (%, numbers)                        |
+| Certifications   | - Company — Title | dates (recent roles)    |
+| OSS / Talks      |   • Technical + metric (2 bullets max)         |
+| Extras / Langs   | Projects (highlighted)                         |
+|                  | - Project title — 1-line summary               |
+|                  |   • Impact bullet                               |
+|                  | Education / Footer                              |
++----------------------------------------------------------------+
+
+Notes & rules:
+- Visual: sidebar narrow (240–280px), main uses remaining width. Keep header full-width.
+- DOM: keep `main` before `aside` in HTML for ATS; use CSS grid to place sidebar left visually.
+- Print: collapse to single column with @media print / max-width fallback.
+- Content: recent roles 1–2 bullets (technical + metric). Move leadership/process into a short separate line.
+- Skills: 6–10 items grouped; stack vertically in sidebar as compact chips.
+
+Quick CSS snippets:
+.layout { display: grid; gap: 20px; grid-template-columns: 1fr; }
+@media (min-width: 900px) {
+  .layout { grid-template-columns: 240px 1fr; }
+  .sidebar { grid-column: 1; }
+  .main { grid-column: 2; }
+}
+@media print { .layout { grid-template-columns: 1fr; } }
+
+.chips { display: flex; flex-direction: column; gap: 8px; }
+.chips span { border: 1px solid rgba(11,102,195,0.12); padding: 6px 8px; border-radius: 6px; }
+
+Implementation steps:
+1) Wrap current content in a `.layout` container with `.main` and `.sidebar`.
+2) Move `skills`, `certs`, `oss`, `extras`, and compact contact into `.sidebar` (visually left).
+3) Keep `summary`, `experience`, `projects`, `education` in `.main` (DOM first).
+4) Add print media rules to collapse to one column and test PDF output.
+
+I've drawn the form above in this file. Want me to apply these changes to `example/resume_golang_backend.html` and `example/style_resume_golang.css` now?

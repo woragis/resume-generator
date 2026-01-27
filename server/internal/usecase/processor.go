@@ -49,93 +49,20 @@ func (p *Processor) Process(ctx context.Context, job *domain.ResumeJob) error {
 			aggregated = agg
 			// merge aggregated data with any provided profile overrides
 			// preprocess overrides so publications/certifications meet schema
-			overrides := map[string]interface{}{}
+			var overrides *Overrides
 			if job.Profile != nil {
-				for k, v := range job.Profile {
-					overrides[k] = v
-				}
+				overrides = NewOverridesFromMap(job.Profile)
+			} else {
+				overrides = &Overrides{Other: map[string]interface{}{}}
 			}
 
-			// helper to normalize publication entries into strings
-			normalizePubs := func(pubsRaw interface{}) []interface{} {
-				out := []interface{}{}
-				if pubsRaw == nil {
-					return out
-				}
-				switch t := pubsRaw.(type) {
-				case []interface{}:
-					for _, itm := range t {
-						switch it := itm.(type) {
-						case string:
-							out = append(out, it)
-						case map[string]interface{}:
-							// prefer title + outline
-							if title, ok := it["title"]; ok {
-								if s, ok := title.(string); ok && s != "" {
-									if outline, ok := it["outline"]; ok {
-										if o, ok := outline.(string); ok && o != "" {
-											out = append(out, s+" — "+o)
-											continue
-										}
-									}
-									out = append(out, s)
-									continue
-								}
-							}
-							// fallback: try outline
-							if outline, ok := it["outline"]; ok {
-								if s, ok := outline.(string); ok && s != "" {
-									out = append(out, s)
-									continue
-								}
-							}
-							out = append(out, itm)
-						default:
-							out = append(out, itm)
-						}
-					}
-				default:
-					if s, ok := t.(string); ok {
-						out = append(out, s)
-					} else {
-						out = append(out, t)
-					}
-				}
-				return out
-			}
+			// overrides is already normalized by NewOverridesFromMap
 
-			if pubsRaw, ok := overrides["publications"]; ok {
-				overrides["publications"] = normalizePubs(pubsRaw)
-			}
-
-			// normalize certifications into array of strings
-			if certsRaw, ok := overrides["certifications"]; ok {
-				out := []interface{}{}
-				switch t := certsRaw.(type) {
-				case []interface{}:
-					for _, c := range t {
-						if s, ok := c.(string); ok {
-							out = append(out, s)
-						}
-					}
-				case string:
-					out = append(out, t)
-				}
-				overrides["certifications"] = out
-			}
-
-			// ensure extras is a trimmed string if present
-			if extras, ok := overrides["extras"]; ok {
-				if s, ok := extras.(string); ok {
-					if len(s) > 140 {
-						overrides["extras"] = s[:140]
-					}
-				}
-			}
+			// overrides is already normalized by NewOverridesFromMap
 
 			payload := map[string]interface{}{
 				"aggregated": agg,
-				"overrides":  overrides,
+				"overrides":  overrides.ToMap(),
 			}
 			rawForAI = payload
 		} else {
@@ -243,71 +170,62 @@ func (p *Processor) Process(ctx context.Context, job *domain.ResumeJob) error {
 							}
 						}
 						if fields != nil {
+							// convert AI-provided fields into typed Overrides for safer handling
+							// fields is already a map[string]interface{} from the AI client
+							fieldsMap := fields
+							ofields := NewOverridesFromMap(fieldsMap)
 							// merge into copy of baseResume
 							merged := map[string]interface{}{}
 							for k, v := range baseResume {
 								merged[k] = v
 							}
-							normalizeEnriched := func(key string, v interface{}) interface{} {
-								switch key {
-								case "publications", "certifications":
-									switch t := v.(type) {
-									case []interface{}:
-										return t
-									case []string:
-										out := []interface{}{}
-										for _, s := range t {
-											out = append(out, s)
-										}
-										return out
-									case string:
-										return []interface{}{t}
-									default:
-										return v
-									}
-								case "extras":
-									// extras must be a string in the schema; normalize accordingly
-									switch t := v.(type) {
-									case string:
-										return t
-									case []interface{}:
-										if len(t) == 0 {
-											return ""
-										}
-										if s, ok := t[0].(string); ok {
-											return s
-										}
-										return fmt.Sprintf("%v", t[0])
-									case []string:
-										if len(t) == 0 {
-											return ""
-										}
-										return t[0]
-									default:
-										return fmt.Sprintf("%v", v)
-									}
-								default:
-									return v
+                            
+							// merge typed fields into the resume map
+							if len(ofields.Publications) > 0 {
+								pubs := make([]interface{}, 0, len(ofields.Publications))
+								for _, s := range ofields.Publications {
+									pubs = append(pubs, s)
 								}
+								merged["publications"] = pubs
 							}
-							for _, k := range []string{"publications", "certifications", "extras"} {
-								if v, ok := fields[k]; ok {
-									merged[k] = normalizeEnriched(k, v)
+							if len(ofields.Certifications) > 0 {
+								certs := make([]interface{}, 0, len(ofields.Certifications))
+								for _, c := range ofields.Certifications {
+									m := map[string]interface{}{"name": c.Name}
+									if c.Issuer != "" {
+										m["issuer"] = c.Issuer
+									}
+									if c.Date != "" {
+										m["date"] = c.Date
+									}
+									if c.URL != "" {
+										m["url"] = c.URL
+									}
+									if c.Description != "" {
+										m["description"] = c.Description
+									}
+									certs = append(certs, m)
+								}
+								merged["certifications"] = certs
+							}
+							if len(ofields.Extras) > 0 {
+								extras := make([]interface{}, 0, len(ofields.Extras))
+								for _, e := range ofields.Extras {
+									extras = append(extras, map[string]interface{}{"category": e.Category, "text": e.Text})
+								}
+								merged["extras"] = extras
+							}
 
-									// Post-process publications to ensure they meet minLength
-									if k == "publications" {
-										if arr, ok := merged[k].([]interface{}); ok {
-											for i, it := range arr {
-												if s, ok := it.(string); ok {
-													if len(strings.TrimSpace(s)) < 40 {
-														arr[i] = s + " — A published article describing scalable architecture, performance improvements, and key takeaways."
-													}
-												}
-											}
-											merged[k] = arr
+							// ensure publications meet minLength
+							if arr, ok := merged["publications"].([]interface{}); ok {
+								for i, it := range arr {
+									if s, ok := it.(string); ok {
+										if len(strings.TrimSpace(s)) < 40 {
+											arr[i] = s + " — A published article describing scalable architecture, performance improvements, and key takeaways."
 										}
 									}
 								}
+								merged["publications"] = arr
 							}
 							resumeMap = merged
 							fmt.Printf("processor: resumeMap enriched (hard-merge of override keys)\n")
@@ -354,62 +272,69 @@ func (p *Processor) Process(ctx context.Context, job *domain.ResumeJob) error {
 				}
 			}
 
-			// certifications -> []interface{} of strings
+			// certifications -> []interface{} of objects
 			if c, ok := m["certifications"]; ok {
+				out := []interface{}{}
 				switch t := c.(type) {
 				case []interface{}:
-					out := []interface{}{}
 					for _, it := range t {
-						if s, ok := it.(string); ok {
-							out = append(out, s)
-						} else {
-							out = append(out, fmt.Sprintf("%v", it))
+						switch v := it.(type) {
+						case string:
+							out = append(out, map[string]interface{}{"name": v})
+						case map[string]interface{}:
+							out = append(out, v)
+						default:
+							out = append(out, map[string]interface{}{"name": fmt.Sprintf("%v", v)})
 						}
 					}
-					m["certifications"] = out
 				case string:
-					m["certifications"] = []interface{}{t}
+					out = append(out, map[string]interface{}{"name": t})
 				default:
-					m["certifications"] = []interface{}{fmt.Sprintf("%v", t)}
+					out = append(out, map[string]interface{}{"name": fmt.Sprintf("%v", t)})
 				}
+				m["certifications"] = out
 			}
 
-			// extras -> string
+			// extras -> []interface{} of objects {category, text}
 			if e, ok := m["extras"]; ok {
+				out := []interface{}{}
 				switch t := e.(type) {
 				case string:
 					s := strings.TrimSpace(t)
 					if len(s) > 140 {
 						s = s[:140]
 					}
-					m["extras"] = s
+					out = append(out, map[string]interface{}{"category": "misc", "text": s})
 				case []interface{}:
-					if len(t) > 0 {
-						if s, ok := t[0].(string); ok {
-							s := strings.TrimSpace(s)
+					for _, it := range t {
+						switch v := it.(type) {
+						case string:
+							s := strings.TrimSpace(v)
 							if len(s) > 140 {
 								s = s[:140]
 							}
-							m["extras"] = s
-						} else {
-							m["extras"] = fmt.Sprintf("%v", t[0])
+							out = append(out, map[string]interface{}{"category": "misc", "text": s})
+						case map[string]interface{}:
+							cat := "misc"
+							if c, ok := v["category"].(string); ok && c != "" {
+								cat = c
+							}
+							txt := ""
+							if s, ok := v["text"].(string); ok {
+								txt = s
+								if len(txt) > 140 {
+									txt = txt[:140]
+								}
+							}
+							out = append(out, map[string]interface{}{"category": cat, "text": txt})
+						default:
+							out = append(out, map[string]interface{}{"category": "misc", "text": fmt.Sprintf("%v", v)})
 						}
-					} else {
-						m["extras"] = ""
-					}
-				case []string:
-					if len(t) > 0 {
-						s := strings.TrimSpace(t[0])
-						if len(s) > 140 {
-							s = s[:140]
-						}
-						m["extras"] = s
-					} else {
-						m["extras"] = ""
 					}
 				default:
-					m["extras"] = fmt.Sprintf("%v", t)
+					out = append(out, map[string]interface{}{"category": "misc", "text": fmt.Sprintf("%v", t)})
 				}
+				m["extras"] = out
 			}
 
 			return m
@@ -592,13 +517,7 @@ func (p *Processor) Process(ctx context.Context, job *domain.ResumeJob) error {
 		fmt.Printf("processor: no cssContent found while attempting to inline\n")
 	}
 
-	// produce PDF
-	pdfBytes, err := p.renderer.RenderHTMLToPDF(ctx, html)
-	if err != nil {
-		return err
-	}
-
-	// save artifacts
+	// save HTML artifact before rendering so it's preserved even if rendering fails
 	ts := time.Now().Format("20060102T150405")
 	genDir := filepath.Join("resume-data", "generated")
 	if err := os.MkdirAll(genDir, 0o755); err != nil {
@@ -609,8 +528,40 @@ func (p *Processor) Process(ctx context.Context, job *domain.ResumeJob) error {
 	if err := ioutil.WriteFile(filepath.Join(genDir, htmlName), []byte(html), 0o644); err != nil {
 		return err
 	}
-	if err := ioutil.WriteFile(filepath.Join(genDir, pdfName), pdfBytes, 0o644); err != nil {
-		return err
+
+	// produce PDF with retry and validation
+	var pdfBytes []byte
+	var renderErr error
+	attempts := 3
+	for i := 0; i < attempts; i++ {
+		pdfBytes, renderErr = p.renderer.RenderHTMLToPDF(ctx, html)
+		if renderErr == nil {
+			// validate basic PDF signature
+			if len(pdfBytes) > 0 && strings.HasPrefix(string(pdfBytes), "%PDF") {
+				renderErr = nil
+				break
+			}
+			renderErr = fmt.Errorf("invalid PDF output (len=%d)", len(pdfBytes))
+		}
+		fmt.Printf("processor: render attempt %d failed: %v\n", i+1, renderErr)
+		// exponential backoff before retrying
+		if i < attempts-1 {
+			backoff := time.Duration(1<<i) * time.Second
+			select {
+			case <-time.After(backoff):
+			case <-ctx.Done():
+				return ctx.Err()
+			}
+		}
+	}
+
+	if renderErr != nil {
+		// log and continue; preserve HTML and record metadata
+		fmt.Printf("processor: rendering failed after %d attempts: %v\n", attempts, renderErr)
+	} else {
+		if err := ioutil.WriteFile(filepath.Join(genDir, pdfName), pdfBytes, 0o644); err != nil {
+			return err
+		}
 	}
 
 	// copy to per-user folder
@@ -618,9 +569,16 @@ func (p *Processor) Process(ctx context.Context, job *domain.ResumeJob) error {
 	if err := os.MkdirAll(userDir, 0o755); err != nil {
 		return err
 	}
-	destName := uuid.New().String() + ".pdf"
-	if err := ioutil.WriteFile(filepath.Join(userDir, destName), pdfBytes, 0o644); err != nil {
-		return err
+	// copy PDF to per-user folder if rendering succeeded
+	if renderErr == nil && len(pdfBytes) > 0 {
+		destName := uuid.New().String() + ".pdf"
+		if err := ioutil.WriteFile(filepath.Join(userDir, destName), pdfBytes, 0o644); err != nil {
+			return err
+		}
+		job.Metadata["user_copy"] = filepath.Join(userDir, destName)
+	} else {
+		job.Metadata["user_copy"] = ""
+		job.Metadata["pdf_render_error"] = fmt.Sprintf("render failed: %v", renderErr)
 	}
 
 	// update job metadata and status
@@ -629,8 +587,11 @@ func (p *Processor) Process(ctx context.Context, job *domain.ResumeJob) error {
 		job.Metadata = map[string]interface{}{}
 	}
 	job.Metadata["generated_html"] = filepath.Join(genDir, htmlName)
-	job.Metadata["generated_pdf"] = filepath.Join(genDir, pdfName)
-	job.Metadata["user_copy"] = filepath.Join(userDir, destName)
+	if renderErr == nil && len(pdfBytes) > 0 {
+		job.Metadata["generated_pdf"] = filepath.Join(genDir, pdfName)
+	} else {
+		job.Metadata["generated_pdf"] = ""
+	}
 	job.UpdatedAt = time.Now()
 
 	if p.repo != nil {

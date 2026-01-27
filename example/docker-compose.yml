@@ -1,0 +1,447 @@
+version: '3.8'
+
+services:
+  # Databases
+  postgres-jobs:
+    image: postgres:16-alpine
+    container_name: postgres-jobs
+    environment:
+      POSTGRES_DB: jobs
+      POSTGRES_USER: woragis
+      POSTGRES_PASSWORD: woragis
+    volumes:
+      - postgres-jobs-data:/var/lib/postgresql/data
+    ports:
+      - '5432:5432'
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U woragis -d jobs']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  postgres-auth:
+    image: postgres:16-alpine
+    container_name: postgres-auth
+    environment:
+      POSTGRES_DB: auth
+      POSTGRES_USER: woragis
+      POSTGRES_PASSWORD: woragis
+    volumes:
+      - postgres-auth-data:/var/lib/postgresql/data
+    ports:
+      - '5433:5432'
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U woragis -d auth']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  postgres-posts:
+    image: postgres:16-alpine
+    container_name: postgres-posts
+    environment:
+      POSTGRES_DB: posts
+      POSTGRES_USER: woragis
+      POSTGRES_PASSWORD: woragis
+    volumes:
+      - postgres-posts-data:/var/lib/postgresql/data
+    ports:
+      - '5434:5432'
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U woragis -d posts']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  postgres-management:
+    image: postgres:16-alpine
+    container_name: postgres-management
+    environment:
+      POSTGRES_DB: management
+      POSTGRES_USER: woragis
+      POSTGRES_PASSWORD: woragis
+    volumes:
+      - postgres-management-data:/var/lib/postgresql/data
+    ports:
+      - '5435:5432'
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U woragis -d management']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # RabbitMQ
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: woragis
+      RABBITMQ_DEFAULT_PASS: woragis
+    ports:
+      - '5672:5672'
+      - '15672:15672'
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+      - ./rabbitmq-init.sh:/rabbitmq-init.sh
+    healthcheck:
+      test: ['CMD', 'rabbitmq-diagnostics', '-q', 'ping']
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    entrypoint: /bin/sh
+    command: /rabbitmq-init.sh
+
+  # Auth Backend
+  auth-backend:
+    image: woragis/woragis-auth-backend:latest
+    container_name: auth-backend
+    environment:
+      APP_NAME: 'woragis-auth-service'
+      APP_ENV: 'production'
+      ENV: 'production'
+      DATABASE_URL: 'postgresql://woragis:woragis@postgres-auth:5432/auth?sslmode=disable'
+      DATABASE_POOL_SIZE: '20'
+      DATABASE_TIMEOUT: '10000'
+      REDIS_URL: 'redis://redis:6379'
+      REDIS_DB: '0'
+      AUTH_JWT_SECRET: 'ilikebananasforareasontheyaretheleastdisgustingfruits'
+      AUTH_JWT_TTL: '24h'
+      AES_KEY: 'iliketoplaygameslikeminecrafttheyarekindafun'
+      HASH_SALT: '10'
+      RABBITMQ_HOST: 'rabbitmq'
+      RABBITMQ_PORT: '5672'
+      RABBITMQ_USER: 'woragis'
+      RABBITMQ_PASSWORD: 'woragis'
+      RABBITMQ_VHOST: 'auth'
+      RABBITMQ_URL: 'amqp://woragis:woragis@rabbitmq:5672/auth'
+      CORS_ENABLED: 'true'
+      CORS_ALLOWED_ORIGINS: 'http://localhost:8080,http://localhost:3000'
+      CORS_ALLOWED_METHODS: 'GET,POST,PUT,PATCH,DELETE,OPTIONS'
+      CORS_ALLOWED_HEADERS: 'Authorization,Content-Type,X-Requested-With,X-API-Key,x-api-key,X-CSRF-Token'
+      CORS_EXPOSED_HEADERS: 'X-CSRF-Token,Content-Type'
+      CORS_ALLOW_CREDENTIALS: 'true'
+      CORS_MAX_AGE: '86400'
+    ports:
+      - '3000:3000'
+    healthcheck:
+      test: ['CMD', 'wget', '--spider', 'http://127.0.0.1:3000/healthz']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    depends_on:
+      postgres-auth:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # Curl E2E Runner (one-shot)
+  curl-e2e-runner:
+    image: alpine:3.18
+    container_name: curl-e2e-runner
+    volumes:
+      - ./curl_e2e_tests:/tests
+    working_dir: /tests
+    entrypoint: ['/bin/sh', '-c']
+    command: "apk add --no-cache curl jq >/dev/null 2>&1 && chmod +x run.sh && EMAIL='jezreel.veloso@gmail.com' PASSWORD='@Woragis2004' HOST=auth-backend AUTH_PORT=3000 POSTS_PORT=3000 JOBS_PORT=3000 MGMT_PORT=3000 ./run.sh"
+    networks:
+      - default
+    restart: 'no'
+
+  # Jobs Backend
+  jobs-backend:
+    image: woragis/woragis-jobs-backend:latest
+    container_name: jobs-backend
+    environment:
+      APP_NAME: 'woragis-jobs-service'
+      APP_ENV: 'production'
+      ENV: 'production'
+      DATABASE_URL: 'postgresql://woragis:woragis@postgres-jobs:5432/jobs?sslmode=disable'
+      REDIS_URL: 'redis://redis:6379'
+      REDIS_DB: '1'
+      AUTH_JWT_SECRET: 'ilikebananasforareasontheyaretheleastdisgustingfruits'
+      AUTH_JWT_TTL: '24h'
+      AES_KEY: 'iliketoplaygameslikeminecrafttheyarekindafun'
+      HASH_SALT: '10'
+      CORS_ENABLED: 'true'
+      CORS_ALLOWED_ORIGINS: 'http://localhost:8080,http://localhost:3000'
+      CORS_ALLOWED_METHODS: 'GET,POST,PUT,PATCH,DELETE,OPTIONS'
+      CORS_ALLOWED_HEADERS: 'Authorization,Content-Type,X-Requested-With,X-API-Key,x-api-key,X-CSRF-Token'
+      CORS_EXPOSED_HEADERS: 'X-CSRF-Token,Content-Type'
+      CORS_ALLOW_CREDENTIALS: 'true'
+      CORS_MAX_AGE: '86400'
+      RABBITMQ_HOST: 'rabbitmq'
+      RABBITMQ_PORT: '5672'
+      RABBITMQ_USER: 'woragis'
+      RABBITMQ_PASSWORD: 'woragis'
+      RABBITMQ_VHOST: 'resume'
+      RABBITMQ_URL: 'amqp://woragis:woragis@rabbitmq:5672/resume'
+      RABBITMQ_EXCHANGE: 'woragis.tasks'
+      RABBITMQ_ROUTING_KEY: 'resumes.generate'
+      RABBITMQ_QUEUE: 'jobs.queue'
+      AUTH_SERVICE_URL: 'http://auth-backend:3000'
+      AI_SERVICE_URL: 'http://ai-service:8000'
+      RESUME_BASE_PATH: '/app/data/resumes'
+      PUBLIC_API_KEY: '${PUBLIC_API_KEY:-internal-service-key}'
+      RESUME_WEBHOOK_SECRET: '${RESUME_WEBHOOK_SECRET:-resume-webhook-secret}'
+    ports:
+      - '3001:3000'
+    volumes:
+      - ./resume-data:/app/data/resumes
+    healthcheck:
+      test: ['CMD', 'wget', '--spider', 'http://127.0.0.1:3000/healthz']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    depends_on:
+      postgres-jobs:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      auth-backend:
+        condition: service_started
+    restart: unless-stopped
+
+  # Posts Backend
+  posts-backend:
+    image: woragis/woragis-posts-backend:latest
+    container_name: posts-backend
+    environment:
+      ENV: 'production'
+      DATABASE_URL: 'postgresql://woragis:woragis@postgres-posts:5432/posts?sslmode=disable'
+      REDIS_URL: 'redis://redis:6379'
+      REDIS_DB: '3'
+      AUTH_JWT_SECRET: 'ilikebananasforareasontheyaretheleastdisgustingfruits'
+      AES_KEY: 'iliketoplaygameslikeminecrafttheyarekindafun'
+      HASH_SALT: '10'
+      AUTH_SERVICE_URL: 'http://auth-backend:3000'
+      RABBITMQ_HOST: 'rabbitmq'
+      RABBITMQ_PORT: '5672'
+      RABBITMQ_USER: 'woragis'
+      RABBITMQ_PASSWORD: 'woragis'
+      RABBITMQ_VHOST: 'posts'
+      RABBITMQ_URL: 'amqp://woragis:woragis@rabbitmq:5672/posts'
+      RABBITMQ_QUEUE: 'posts.queue'
+      RABBITMQ_EXCHANGE: 'woragis.posts'
+      RABBITMQ_ROUTING_KEY: 'posts.create'
+      CORS_ENABLED: 'true'
+      CORS_ALLOWED_ORIGINS: 'http://localhost:8080,http://localhost:3000'
+      CORS_ALLOWED_METHODS: 'GET,POST,PUT,PATCH,DELETE,OPTIONS'
+      CORS_ALLOWED_HEADERS: 'Authorization,Content-Type,X-Requested-With,X-API-Key,x-api-key,X-CSRF-Token'
+      CORS_EXPOSED_HEADERS: 'X-CSRF-Token,Content-Type'
+      CORS_ALLOW_CREDENTIALS: 'true'
+      CORS_MAX_AGE: '86400'
+    ports:
+      - '3002:3000'
+    healthcheck:
+      test: ['CMD', 'wget', '--spider', 'http://127.0.0.1:3000/healthz']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    depends_on:
+      postgres-posts:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      auth-backend:
+        condition: service_started
+    restart: unless-stopped
+
+  # Management Backend
+  management-backend:
+    image: woragis/woragis-management-backend:latest
+    container_name: management-backend
+    environment:
+      ENV: 'production'
+      DATABASE_URL: 'postgresql://woragis:woragis@postgres-management:5432/management?sslmode=disable'
+      REDIS_URL: 'redis://redis:6379'
+      REDIS_DB: '3'
+      AUTH_JWT_SECRET: 'ilikebananasforareasontheyaretheleastdisgustingfruits'
+      AES_KEY: 'iliketoplaygameslikeminecrafttheyarekindafun'
+      HASH_SALT: '10'
+      RABBITMQ_HOST: 'rabbitmq'
+      RABBITMQ_PORT: '5672'
+      RABBITMQ_USER: 'woragis'
+      RABBITMQ_PASSWORD: 'woragis'
+      RABBITMQ_VHOST: 'management'
+      RABBITMQ_URL: 'amqp://woragis:woragis@rabbitmq:5672/management'
+      RABBITMQ_QUEUE: 'management.queue'
+      RABBITMQ_EXCHANGE: 'woragis.management'
+      RABBITMQ_ROUTING_KEY: 'management.create'
+      CORS_ENABLED: 'true'
+      CORS_ALLOWED_ORIGINS: 'http://localhost:8080,http://localhost:3000'
+      CORS_ALLOWED_METHODS: 'GET,POST,PUT,PATCH,DELETE,OPTIONS'
+      CORS_ALLOWED_HEADERS: 'Authorization,Content-Type,X-Requested-With,X-API-Key,x-api-key,X-CSRF-Token'
+      CORS_EXPOSED_HEADERS: 'X-CSRF-Token,Content-Type'
+      CORS_ALLOW_CREDENTIALS: 'true'
+      CORS_MAX_AGE: '86400'
+    ports:
+      - '3003:3000'
+    depends_on:
+      postgres-management:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      auth-backend:
+        condition: service_started
+    healthcheck:
+      test:
+        [
+          'CMD-SHELL',
+          'wget --no-verbose --tries=1 --spider http://localhost:3000/healthz || exit 1',
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+
+  # AI Service
+  ai-service:
+    image: woragis/ai-service:latest
+    container_name: ai-service
+    environment:
+      ENV: 'production'
+      LOG_LEVEL: 'INFO'
+      LOG_TO_FILE: 'false'
+      CORS_ENABLED: 'true'
+      CORS_ALLOWED_ORIGINS: 'http://localhost:8080,http://localhost:3000'
+      OPENAI_API_KEY: '${OPENAI_API_KEY}'
+      OPENAI_MODEL: 'gpt-4o-mini'
+      OPENAI_TEMPERATURE: '0.3'
+    ports:
+      - '8000:8000'
+    restart: unless-stopped
+
+  # Resume Service
+  resume-service:
+    build:
+      context: ../Services-Workers/resume-service
+      dockerfile: Dockerfile
+    container_name: resume-service
+    environment:
+      ENV: 'production'
+      SERVICE_NAME: 'resume-service'
+      LOG_LEVEL: 'INFO'
+      LOG_TO_FILE: 'false'
+      DATABASE_URL: 'postgresql://woragis:woragis@postgres-jobs:5432/jobs?sslmode=disable'
+      AI_SERVICE_URL: 'http://ai-service:8000'
+      AI_SERVICE_TIMEOUT: '30'
+      RESUME_OUTPUT_DIR: '/app/data/resumes/generated'
+      RABBITMQ_HOST: 'rabbitmq'
+      RABBITMQ_PORT: '5672'
+      RABBITMQ_USER: 'woragis'
+      RABBITMQ_PASSWORD: 'woragis'
+      RABBITMQ_VHOST: 'resume'
+      RABBITMQ_QUEUE: 'resumes.queue'
+      JOBS_BACKEND_URL: 'http://jobs-backend:3000'
+      JOBS_BACKEND_API_KEY: '${PUBLIC_API_KEY:-internal-service-key}'
+      RESUME_WEBHOOK_SECRET: '${RESUME_WEBHOOK_SECRET:-resume-webhook-secret}'
+    ports:
+      - '8001:8080'
+    volumes:
+      - ./resume-data:/app/data/resumes
+    depends_on:
+      postgres-jobs:
+        condition: service_healthy
+      ai-service:
+        condition: service_started
+    restart: unless-stopped
+
+  # Resume Worker
+  resume-worker:
+    image: woragis/woragis-jobs-resume-worker:latest
+    container_name: resume-worker
+    environment:
+      LOG_LEVEL: 'debug'
+      NODE_ENV: 'development'
+      DATABASE_URL: 'postgresql://woragis:woragis@postgres-jobs:5432/jobs?sslmode=disable'
+      DATABASE_URL_AUTH: 'postgresql://woragis:woragis@postgres-auth:5432/auth?sslmode=disable'
+      DATABASE_URL_MANAGEMENT: 'postgresql://woragis:woragis@postgres-management:5432/management?sslmode=disable'
+      DATABASE_URL_POSTS: 'postgresql://woragis:woragis@postgres-posts:5432/posts?sslmode=disable'
+      RABBITMQ_HOST: 'rabbitmq'
+      RABBITMQ_PORT: '5672'
+      RABBITMQ_USER: 'woragis'
+      RABBITMQ_PASSWORD: 'woragis'
+      RABBITMQ_VHOST: 'resume'
+      RABBITMQ_URL: 'amqp://woragis:woragis@rabbitmq:5672/resume'
+      RABBITMQ_QUEUE_NAME: 'resumes.queue'
+      RABBITMQ_EXCHANGE: 'woragis.tasks'
+      RABBITMQ_ROUTING_KEY: 'resumes.generate'
+      RABBITMQ_PREFETCH_COUNT: '5'
+      RABBITMQ_DLQ_NAME: 'resumes.dlq'
+      RABBITMQ_DLQ_EXCHANGE: 'woragis.dlq'
+      AI_SERVICE_URL: 'http://ai-service:8000'
+      RESUME_SERVICE_URL: 'http://resume-service:8080'
+      AI_SERVICE_TIMEOUT: '60000'
+      RESUME_SERVICE_TIMEOUT: '300000'
+      ENABLE_HTTP_FALLBACK: 'true'
+      FALLBACK_PORT: '3005'
+    volumes:
+      - ./resume-data:/app/storage/resumes
+    depends_on:
+      postgres-jobs:
+        condition: service_healthy
+      postgres-posts:
+        condition: service_healthy
+      postgres-management:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      ai-service:
+        condition: service_started
+      resume-service:
+        condition: service_started
+    restart: unless-stopped
+    ports:
+      - '3005:3005'
+
+  # Postman E2E Runner (one-shot)
+  postman-e2e-runner:
+    image: python:3.11-slim
+    container_name: postman-e2e-runner
+    depends_on:
+      auth-backend:
+        condition: service_healthy
+      posts-backend:
+        condition: service_healthy
+      jobs-backend:
+        condition: service_healthy
+      management-backend:
+        condition: service_healthy
+    volumes:
+      - ./postman_e2e_runner:/app/postman_e2e_runner:ro
+      - ./resume-data:/app/data/resumes
+    working_dir: /app
+    entrypoint: ['/bin/sh', '-c']
+    command: 'python -m postman_e2e_runner.run --host auth-backend --auth-port 3000 --posts-port 3000 --jobs-port 3000 --mgmt-port 3000'
+    restart: 'no'
+
+volumes:
+  postgres-jobs-data:
+  postgres-auth-data:
+  postgres-posts-data:
+  postgres-management-data:
+  redis-data:
+  rabbitmq-data:
+  resume-data:
+
+networks:
+  default:
+    name: woragis-network

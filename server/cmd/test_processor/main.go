@@ -10,24 +10,16 @@ import (
 	"os"
 	"time"
 
+	"resume-generator/internal/adapter/repository"
 	"resume-generator/internal/domain"
 	"resume-generator/internal/usecase"
+	"resume-generator/pkg/infrastructure"
 	"strings"
 
 	"github.com/google/uuid"
 )
 
-// noop renderer that returns an empty PDF
-type noopRenderer struct{}
-
-func (n *noopRenderer) RenderHTMLToPDF(ctx context.Context, html string) ([]byte, error) {
-	return []byte("PDF-BYTES"), nil
-}
-
-// noop jobs repo
-type noopRepo struct{}
-
-func (n *noopRepo) Save(ctx context.Context, j *domain.ResumeJob) error { return nil }
+// Using real renderer and repo implementations for the processor
 
 func startMockAI(addr string) *http.Server {
 	mux := http.NewServeMux()
@@ -93,9 +85,9 @@ func main() {
 	srv := startMockAI(":8000")
 	defer srv.Shutdown(context.Background())
 
-	// create processor with noop renderer and repo
-	r := &noopRenderer{}
-	repo := &noopRepo{}
+	// create processor with real renderer and a repo wrapper (pool nil for tests)
+	r := infrastructure.NewChromedpRenderer()
+	repo := repository.NewJobsRepo(nil)
 	processor := usecase.NewProcessor(r, repo, "templates")
 
 	// build a job with overrides

@@ -1,0 +1,159 @@
+/* Minimal single-accent resume style */
+:root {
+  --accent: #0b66c3;
+  --text: #111;
+  --muted: #555;
+  --page-width: 800px;
+}
+* {
+  box-sizing: border-box;
+}
+h2,
+h3 {
+  color: var(--accent);
+  margin: 10px 0 6px 0;
+}
+.page {
+  max-width: var(--page-width);
+  margin: 0 auto;
+  padding: 32px;
+  border-radius: 6px;
+}
+.header {
+  display: flex;
+  flex-direction: column;
+  border-bottom: 1px solid rgba(11, 102, 195, 0.14);
+  padding-bottom: 12px;
+  margin-bottom: 14px;
+}
+.name {
+  font-size: 18pt;
+  font-weight: 700;
+}
+.meta {
+  font-size: 10pt;
+  color: var(--muted);
+  margin-top: 6px;
+}
+body {
+  font-family:
+    Inter,
+    Segoe UI,
+    Arial,
+    Helvetica,
+    sans-serif;
+  color: var(--text);
+  line-height: 1.12;
+  margin: 28px;
+}
+.visually-hidden {
+  position: absolute !important;
+  left: -10000px !important;
+  top: auto !important;
+  width: 1px !important;
+  height: 1px !important;
+  overflow: hidden !important;
+}
+
+h2,
+h3 {
+  color: var(--accent);
+  margin: 8px 0 6px 0;
+  font-size: 12pt;
+  font-weight: 600;
+}
+.summary p {
+  margin: 0;
+  font-size: 11pt;
+}
+.skills .chips {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  font-size: 10.25pt;
+  color: var(--muted);
+}
+.chips span {
+  background: transparent;
+  padding: 6px 8px;
+  border-radius: 6px;
+  border: 1px solid rgba(11, 102, 195, 0.12);
+}
+.experience .role {
+  margin-bottom: 14px;
+}
+.role-head {
+  font-weight: 600;
+  font-size: 11pt;
+  color: #000;
+}
+ul {
+  margin: 8px 0 0 20px;
+  padding: 0;
+}
+li {
+  margin: 8px 0;
+  font-size: 10.5pt;
+}
+.project {
+  margin-bottom: 10px;
+}
+.proj-title {
+  font-weight: 600;
+  font-size: 10.5pt;
+}
+.proj-desc {
+  font-size: 10pt;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+.education,
+.certs,
+.oss,
+.extras {
+  margin-top: 10px;
+  font-size: 10pt;
+  color: var(--text);
+}
+.foot {
+  margin-top: 20px;
+  font-size: 9pt;
+  color: var(--muted);
+  text-align: center;
+}
+
+section {
+  margin-bottom: 12px;
+}
+
+/* Print / PDF-friendly settings */
+@page {
+  size: A4 portrait;
+  margin: 12mm;
+}
+@media print {
+  body {
+    margin: 0;
+  }
+  .page {
+    box-shadow: none;
+    padding: 12mm;
+  }
+  .chips span {
+    border: none;
+    background: transparent;
+  }
+  h2,
+  h3 {
+    color: #0b66c3;
+  }
+}
+
+@media print {
+  body {
+    margin: 0;
+  }
+  .page {
+    box-shadow: none;
+  }
+}
