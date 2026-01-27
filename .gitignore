@@ -1,5 +1,6 @@
 # Binaries
-resume-generator
+# (Binary files are kept out of repository by default; removed to allow
+# deliberate commits of built artifacts when necessary.)
 
 # Environment
 .env

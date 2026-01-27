@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en" class="theme-cool">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>{{ index (index .Profile "meta") "name" }} — Resume</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div class="page">
+      <header class="header">
+        <div class="name">{{ index (index .Profile "meta") "name" }}</div>
+        <div class="meta">{{ index (index .Profile "meta") "headline" }}{{ with index (index .Profile "meta") "contact" }} — {{ index . "email" }}{{ end }}</div>
+      </header>
+
+      <div class="visually-hidden">{{ index .Profile "summary" }}</div>
+
+      <div class="layout">
+        <main class="main">
+          <section class="summary">
+            <h2>Professional Summary</h2>
+            <p>{{ index .Profile "summary" }}</p>
+          </section>
+
+          {{ with index .Profile "snapshot" }}
+          <section class="snapshot">
+            <h3>Tech Snapshot</h3>
+            <div>{{ index . "tech" }}</div>
+
+            <h3>Top Achievements</h3>
+            <ul class="achievements">
+              {{ range $i, $a := index . "achievements" }}<li>{{ $a }}</li>{{ end }}
+            </ul>
+
+            <h3>Selected Projects</h3>
+            <ul class="selected-projects">
+              {{ range $i, $p := index . "selected_projects" }}<li>{{ $p }}</li>{{ end }}
+            </ul>
+          </section>
+          {{ end }}
+
+          {{ with index .Profile "experience" }}
+          <section class="experience">
+            <h2>Experience</h2>
+            {{ range $i, $r := . }}
+              <div class="role">
+                <div class="role-head">{{ index $r "company" }} — {{ index $r "title" }}{{ if index $r "period" }} | {{ index $r "period" }}{{ end }}</div>
+                {{ if index $r "bullets" }}<ul>{{ range $j, $b := index $r "bullets" }}<li>{{ $b }}</li>{{ end }}</ul>{{ end }}
+              </div>
+            {{ end }}
+          </section>
+          {{ end }}
+
+        </main>
+      </div>
+
+      <footer class="foot">References available on request</footer>
+    </div>
+
+    <!-- Page 2 -->
+    <div class="page">
+      <header class="header">
+        <div class="name">{{ index (index .Profile "meta") "name" }}</div>
+        <div class="meta">Page 2 — Projects & Publications</div>
+      </header>
+
+      <div class="layout">
+        <main class="main">
+          <section class="projects">
+            <h2>Projects — Case Studies</h2>
+            {{ with index .Profile "projects" }}
+              {{ range $i, $p := . }}
+                <div class="project" id="project-{{ $i }}">
+                  <div class="proj-title">{{ index $p "title" }}{{ if index $p "url" }} — <a href="{{ index $p "url" }}" target="_blank" rel="noopener">link</a>{{ end }}</div>
+                  <div class="proj-desc">{{ index $p "description" }}</div>
+                  {{ if index $p "bullets" }}<ul>{{ range $j, $b := index $p "bullets" }}<li>{{ $b }}</li>{{ end }}</ul>{{ end }}
+                </div>
+              {{ end }}
+            {{ end }}
+          </section>
+
+          <section class="publications">
+            <h2>Publications</h2>
+            <ul>
+              {{ range $i, $pub := index .Profile "publications" }}<li>{{ $pub }}</li>{{ end }}
+            </ul>
+          </section>
+
+          <section class="education">
+            <h2>Certifications & Extras</h2>
+              {{ with index .Profile "certifications" }}
+                <ul class="certifications">
+                  {{ range $i, $c := . }}<li>{{ $c }}</li>{{ end }}
+                </ul>
+              {{ end }}
+            <div style="margin-top:8px">{{ index .Profile "extras" }}</div>
+          </section>
+        </main>
+      </div>
+
+      <footer class="foot">References available on request</footer>
+    </div>
+  </body>
+</html>

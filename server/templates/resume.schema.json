@@ -1,0 +1,88 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Resume",
+  "type": "object",
+  "properties": {
+    "meta": {
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "headline": { "type": "string" },
+        "contact": {
+          "type": "object",
+          "properties": {
+            "email": { "type": "string", "format": "email" },
+            "github": { "type": "string" },
+            "location": { "type": "string" }
+          }
+        }
+      },
+      "required": ["name", "headline"]
+    },
+    "summary": { "type": "string", "minLength": 80, "maxLength": 220 },
+    "snapshot": {
+      "type": "object",
+      "properties": {
+        "tech": { "type": "string", "minLength": 10, "maxLength": 120 },
+        "achievements": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 3,
+          "items": { "type": "string", "minLength": 40, "maxLength": 140 }
+        },
+        "selected_projects": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "items": { "type": "string", "minLength": 40, "maxLength": 100 }
+        }
+      },
+      "required": ["tech", "achievements", "selected_projects"]
+    },
+    "experience": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "company": { "type": "string" },
+          "title": { "type": "string" },
+          "period": { "type": "string" },
+          "bullets": {
+            "type": "array",
+            "items": { "type": "string", "minLength": 40, "maxLength": 140 }
+          }
+        },
+        "required": ["company", "title"]
+      }
+    },
+    "projects": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "title": { "type": "string", "maxLength": 80 },
+          "url": { "type": "string", "format": "uri" },
+          "stack": { "type": "string" },
+          "description": {
+            "type": "string",
+            "minLength": 80,
+            "maxLength": 220
+          },
+          "bullets": {
+            "type": "array",
+            "items": { "type": "string", "minLength": 40, "maxLength": 140 }
+          }
+        },
+        "required": ["id", "title", "description"]
+      }
+    },
+    "publications": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 40 }
+    },
+    "certifications": { "type": "array", "items": { "type": "string" } },
+    "extras": { "type": "string", "maxLength": 140 }
+  },
+  "required": ["meta", "summary", "snapshot", "experience", "projects"]
+}
