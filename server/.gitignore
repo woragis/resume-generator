@@ -1,0 +1,23 @@
+# Binary
+resume-generator
+
+# Environment
+.env
+
+# Generated
+resume-data/generated/
+resume-data/resumes/
+
+# Logs
+*.log
+server.log
+resume_logs.txt
+
+# Go
+vendor/
+*.test
+*.out
+
+# IDE
+.vscode/
+.idea/

@@ -1,0 +1,6 @@
+.git
+.gitignore
+.env
+resume-data/generated
+resume-data/resumes
+*.log

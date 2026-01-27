@@ -1,0 +1,9 @@
+.git
+.gitignore
+resume-data/generated
+resume-data/resumes
+*.log
+.env
+node_modules
+__pycache__
+*.pyc

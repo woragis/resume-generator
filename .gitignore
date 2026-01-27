@@ -1,0 +1,28 @@
+# Binaries
+resume-generator
+
+# Environment
+.env
+.env.local
+
+# Generated resumes
+resume-data/generated/
+resume-data/resumes/
+
+# Logs
+server.log
+resume_logs.txt
+
+# Go
+bin/
+vendor/
+*.test
+*.out
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
