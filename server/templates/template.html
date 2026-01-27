@@ -90,10 +90,22 @@
             <h2>Certifications & Extras</h2>
               {{ with index .Profile "certifications" }}
                 <ul class="certifications">
-                  {{ range $i, $c := . }}<li>{{ $c }}</li>{{ end }}
+                  {{ range $i, $c := . }}
+                    <li>
+                      <div class="cert-name"><strong>{{ index $c "name" }}</strong>{{ if index $c "issuer" }} — <em>{{ index $c "issuer" }}</em>{{ end }}{{ if index $c "date" }} ({{ index $c "date" }}){{ end }}</div>
+                      {{ if index $c "url" }}<div class="cert-url"><a href="{{ index $c "url" }}" target="_blank" rel="noopener">{{ index $c "url" }}</a></div>{{ end }}
+                      {{ if index $c "description" }}<div class="cert-desc">{{ index $c "description" }}</div>{{ end }}
+                    </li>
+                  {{ end }}
                 </ul>
               {{ end }}
-            <div style="margin-top:8px">{{ index .Profile "extras" }}</div>
+              {{ with index .Profile "extras" }}
+                <ul class="extras">
+                  {{ range $i, $e := . }}
+                    <li><strong>{{ index $e "category" }}:</strong> {{ index $e "text" }}</li>
+                  {{ end }}
+                </ul>
+              {{ end }}
           </section>
         </main>
       </div>

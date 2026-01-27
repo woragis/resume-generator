@@ -96,6 +96,9 @@ func (c *Client) FormatResume(ctx context.Context, rawProfile interface{}) (map[
  - snapshot.selected_projects: array of 2 strings, each min 40, max 100 characters
  - experience: array of objects with company (string), title (string), period (string), bullets: array of strings (each min 40, max 140)
  - projects: array of objects with id (string), title (string, max 80), url (uri), stack (string), description (80-220), bullets (array of strings 40-140)
+	 - publications: array of strings, each minLength 40
+	 - certifications: array of objects with fields {name: string (required), issuer: string, date: string (date), url: uri, description: string (max 140)}
+	 - extras: array of objects with {category: string, text: string (max 140)}
 
 If any field would exceed the max length, you MUST shorten or summarize the text so it fits the max.
 You MUST return ONLY valid JSON (a single object) and NOTHING ELSE — no commentary, no markdown, no code fences.
@@ -106,7 +109,10 @@ Example JSON skeleton (use this structure and follow the length limits):
 	"summary": "A short summary between 80 and 220 chars...",
 	"snapshot": {"tech": "Comma-separated tech list", "achievements": ["ach1","ach2","ach3"], "selected_projects": ["proj short 1","proj short 2"]},
 	"experience": [{"company":"Org","title":"Role","period":"YYYY–YYYY","bullets":["accomplishment 1","accomplishment 2"]}],
-	"projects": [{"id":"p1","title":"Short title","url":"https://...","stack":"Go, Postgres","description":"80-220 char description...","bullets":["impact 1","impact 2"]}]
+	"projects": [{"id":"p1","title":"Short title","url":"https://...","stack":"Go, Postgres","description":"80-220 char description...","bullets":["impact 1","impact 2"]}],
+	"publications": ["Title — YEAR. One-line summary."],
+	"certifications": [{"name": "Certified X", "issuer": "Org", "date": "2024-01-01", "url": "https://...", "description": "One-line summary"}],
+	"extras": [{"category": "Open Source", "text": "Maintainer of project X"}]
 }
 `
 
@@ -185,7 +191,7 @@ Example JSON skeleton (use this structure and follow the length limits):
 // ai-service to preserve and, if necessary, expand those override items to
 // meet schema constraints without changing other sections.
 func (c *Client) EnrichResume(ctx context.Context, baseResume map[string]interface{}, overrides map[string]interface{}) (map[string]interface{}, error) {
-	instr := "You will receive a previously validated resume JSON (base_resume) and a small set of override lists (publications, certifications, extras). Update ONLY the fields publications, certifications, extras: preserve existing values, and if any publication is shorter than the schema minLength, expand it into a single string 'Title — YEAR. One-line summary.' Do NOT modify other fields. Return ONLY the full resume JSON object (same schema) and NOTHING ELSE."
+	instr := "You will receive a previously validated resume JSON (base_resume) and a small set of override lists (publications, certifications, extras). Update ONLY the fields publications, certifications, extras: preserve existing values. Ensure publications are strings meeting the schema minLength; if short, expand them into 'Title — YEAR. One-line summary.' For certifications, return structured objects with fields {name, issuer, date, url, description} (name required). For extras, return an array of objects {category, text}. Do NOT modify other fields. Return ONLY the full resume JSON object (same schema) and NOTHING ELSE."
 
 	payloadObj := map[string]interface{}{
 		"base_resume":  baseResume,
@@ -267,7 +273,7 @@ func (c *Client) EnrichResume(ctx context.Context, baseResume map[string]interfa
 // risk of modifying other parts of the resume and makes targeted merging
 // safer.
 func (c *Client) EnrichFields(ctx context.Context, overrides map[string]interface{}) (map[string]interface{}, error) {
-	instr := `You will receive a small overrides object containing any of the keys: publications, certifications, extras. Return ONLY a single JSON object with those keys present (if provided) and values formatted exactly as arrays or strings according to the schema. Do NOT include any other fields, commentary, or formatting. Example response: {"publications":["Title — YEAR. One-line summary."],"certifications":["Cert A"],"extras":"text"}`
+	instr := `You will receive a small overrides object containing any of the keys: publications, certifications, extras. Return ONLY a single JSON object with those keys present (if provided) and values formatted exactly to match the schema: publications -> array of strings, certifications -> array of objects {name, issuer, date, url, description}, extras -> array of objects {category, text}. Do NOT include any other fields, commentary, or formatting. Example response: {"publications":["Title — YEAR. One-line summary."],"certifications":[{"name":"Cert A","issuer":"Org","date":"2024-01-01","url":"https://...","description":"One-line"}],"extras":[{"category":"Speaking","text":"Talk at Conf 2024"}]}`
 
 	payloadObj := map[string]interface{}{
 		"overrides":    overrides,
