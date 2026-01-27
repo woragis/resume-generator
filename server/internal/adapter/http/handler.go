@@ -22,9 +22,9 @@ func NewHandler(p *usecase.Processor, r usecase.JobsRepo) *Handler {
 }
 
 type startReq struct {
-	UserID         string                 `json:"userId"`
-	Profile        map[string]interface{} `json:"profile"`
-	JobDescription string                 `json:"jobDescription"`
+	UserID           string `json:"userId"`
+	JobApplicationID string `json:"jobApplicationId"`
+	JobDescription   string `json:"jobDescription,omitempty"`
 }
 
 func (h *Handler) StartJob(c *fiber.Ctx) error {
@@ -46,7 +46,11 @@ func (h *Handler) StartJob(c *fiber.Ctx) error {
 		Metadata:       map[string]interface{}{},
 		CreatedAt:      time.Now(),
 		UpdatedAt:      time.Now(),
-		Profile:        req.Profile,
+		Profile:        nil,
+	}
+
+	if req.JobApplicationID != "" {
+		job.Metadata["job_application_id"] = req.JobApplicationID
 	}
 
 	// persist initial job (best-effort)
