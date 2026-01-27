@@ -1,5 +1,6 @@
 # Binary
-resume-generator
+# resume-generator (built binary) is ignored by default; remove this
+# line if you want to commit the built executable deliberately.
 
 # Environment
 .env
