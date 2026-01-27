@@ -1,0 +1,245 @@
+services:
+  postgres-jobs:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: jobs
+      POSTGRES_USER: woragis
+      POSTGRES_PASSWORD: woragis
+    volumes:
+      - postgres-jobs-data:/var/lib/postgresql/data
+    # no host port mapping to avoid conflicts during local tests
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U woragis -d jobs']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: on-failure:3
+
+  postgres-auth:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: auth
+      POSTGRES_USER: woragis
+      POSTGRES_PASSWORD: woragis
+    volumes:
+      - postgres-auth-data:/var/lib/postgresql/data
+    # no host port mapping to avoid conflicts during local tests
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U woragis -d auth']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: on-failure:3
+
+  postgres-posts:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: posts
+      POSTGRES_USER: woragis
+      POSTGRES_PASSWORD: woragis
+    volumes:
+      - postgres-posts-data:/var/lib/postgresql/data
+    # no host port mapping to avoid conflicts during local tests
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U woragis -d posts']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: on-failure:3
+
+  postgres-management:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: management
+      POSTGRES_USER: woragis
+      POSTGRES_PASSWORD: woragis
+    volumes:
+      - postgres-management-data:/var/lib/postgresql/data
+    # no host port mapping to avoid conflicts during local tests
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U woragis -d management']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: on-failure:3
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: on-failure:3
+
+  ai-service:
+    image: woragis/ai-service:latest
+    env_file:
+      - .env
+    environment:
+      ENV: 'production'
+      LOG_LEVEL: 'INFO'
+      OPENAI_API_KEY: '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'
+      OPENAI_MODEL: ${OPENAI_MODEL}
+      OPENAI_TEMPERATURE: ${OPENAI_TEMPERATURE}
+    # no host port mapping; internal services use the compose network
+    restart: on-failure:3
+
+  auth-backend:
+    image: woragis/woragis-auth-backend:latest
+    environment:
+      DATABASE_URL: ${AUTH_DATABASE_URL}
+      REDIS_URL: ${AUTH_REDIS_URL}
+      AES_KEY: ${AUTH_AES_KEY}
+      HASH_SALT: ${AUTH_HASH_SALT}
+      JWT_SECRET: ${AUTH_JWT_SECRET}
+      RABBITMQ_URL: ''
+    # no host port mapping; use internal network
+    healthcheck:
+      test:
+        [
+          'CMD-SHELL',
+          'wget --spider --quiet http://127.0.0.1:3000/healthz || exit 1',
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    depends_on:
+      postgres-auth:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: on-failure:3
+
+  jobs-backend:
+    image: woragis/woragis-jobs-backend:latest
+    environment:
+      DATABASE_URL: ${JOBS_DATABASE_URL}
+      REDIS_URL: ${JOBS_REDIS_URL}
+      AES_KEY: ${JOBS_AES_KEY}
+      HASH_SALT: ${JOBS_HASH_SALT}
+      JWT_SECRET: ${JOBS_JWT_SECRET}
+      AUTH_SERVICE_URL: ${AUTH_SERVICE_URL:-http://auth-backend:3000}
+      AI_SERVICE_URL: ${AI_SERVICE_URL}
+    # no host port mapping; use internal network
+    healthcheck:
+      test:
+        [
+          'CMD-SHELL',
+          'wget --spider --quiet http://127.0.0.1:3000/healthz || exit 1',
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    depends_on:
+      postgres-jobs:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      auth-backend:
+        condition: service_started
+    restart: on-failure:3
+
+  posts-backend:
+    image: woragis/woragis-posts-backend:latest
+    environment:
+      DATABASE_URL: ${POSTS_DATABASE_URL}
+      REDIS_URL: ${POSTS_REDIS_URL}
+      AES_KEY: ${POSTS_AES_KEY}
+      HASH_SALT: ${POSTS_HASH_SALT}
+      AUTH_SERVICE_URL: ${AUTH_SERVICE_URL:-http://auth-backend:3000}
+    # no host port mapping; use internal network
+    healthcheck:
+      test:
+        [
+          'CMD-SHELL',
+          'wget --spider --quiet http://127.0.0.1:3000/healthz || exit 1',
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    depends_on:
+      postgres-posts:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      auth-backend:
+        condition: service_started
+    restart: on-failure:3
+
+  management-backend:
+    image: woragis/woragis-management-backend:latest
+    environment:
+      DATABASE_URL: ${MGMT_DATABASE_URL}
+      REDIS_URL: ${MGMT_REDIS_URL}
+      AES_KEY: ${MGMT_AES_KEY}
+      HASH_SALT: ${MGMT_HASH_SALT}
+      JWT_SECRET: ${MGMT_JWT_SECRET}
+      AUTH_SERVICE_URL: ${AUTH_SERVICE_URL:-http://auth-backend:3000}
+    # no host port mapping; use internal network
+    healthcheck:
+      test:
+        [
+          'CMD-SHELL',
+          'wget --spider --quiet http://127.0.0.1:3000/healthz || exit 1',
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    depends_on:
+      postgres-management:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      auth-backend:
+        condition: service_started
+    restart: on-failure:3
+
+  resume-generator:
+    build: .
+    image: resume-generator-local:latest
+    env_file:
+      - .env
+    environment:
+      AUTH_DATABASE_URL: ${AUTH_DATABASE_URL}
+      JOBS_DATABASE_URL: ${JOBS_DATABASE_URL}
+      POSTS_DATABASE_URL: ${POSTS_DATABASE_URL}
+      MGMT_DATABASE_URL: ${MGMT_DATABASE_URL}
+      REDIS_URL: ${AUTH_REDIS_URL}
+      AI_SERVICE_URL: ${AI_SERVICE_URL}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      OPENAI_MODEL: ${OPENAI_MODEL}
+    volumes:
+      - ./resume-data:/app/resume-data
+      - ./templates:/app/templates:ro
+    depends_on:
+      postgres-auth:
+        condition: service_healthy
+      postgres-jobs:
+        condition: service_healthy
+      postgres-posts:
+        condition: service_healthy
+      postgres-management:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      ai-service:
+        condition: service_started
+    healthcheck:
+      test:
+        ['CMD-SHELL', 'wget --spider --quiet http://127.0.0.1:3000/ || exit 1']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: on-failure:3
+
+volumes:
+  postgres-jobs-data:
+  postgres-auth-data:
+  postgres-posts-data:
+  postgres-management-data:
+  redis-data:
