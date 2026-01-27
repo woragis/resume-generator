@@ -83,7 +83,7 @@ services:
     environment:
       ENV: 'production'
       LOG_LEVEL: 'INFO'
-      OPENAI_API_KEY: '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'
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
       OPENAI_MODEL: ${OPENAI_MODEL}
       OPENAI_TEMPERATURE: ${OPENAI_TEMPERATURE}
     # no host port mapping; internal services use the compose network
@@ -216,6 +216,8 @@ services:
     volumes:
       - ./resume-data:/app/resume-data
       - ./templates:/app/templates:ro
+    ports:
+      - '3000:3000'
     depends_on:
       postgres-auth:
         condition: service_healthy

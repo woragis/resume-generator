@@ -47,6 +47,23 @@ func (p *Processor) Process(ctx context.Context, job *domain.ResumeJob) error {
 		if err == nil {
 			// keep the aggregated result for later merging if needed
 			aggregated = agg
+			// If a job_application_id was provided on the job, fetch that
+			// specific job application and include it in the aggregated payload
+			if job.Metadata != nil {
+				if jaidRaw, ok := job.Metadata["job_application_id"]; ok {
+					if jaid, ok2 := jaidRaw.(string); ok2 && jaid != "" {
+						if ja, err := repo.GetJobApplicationByID(ctx, jaid); err == nil {
+							// ensure agg is a map-like structure
+							if ar, ok := aggregated.(repo.AggregateResult); ok {
+								ar["job_application"] = ja
+								aggregated = ar
+							}
+						} else {
+							fmt.Printf("processor: failed to fetch job_application %s: %v\n", jaid, err)
+						}
+					}
+				}
+			}
 			// merge aggregated data with any provided profile overrides
 			// preprocess overrides so publications/certifications meet schema
 			var overrides *Overrides

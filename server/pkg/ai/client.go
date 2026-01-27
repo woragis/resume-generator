@@ -110,6 +110,7 @@ Example JSON skeleton (use this structure and follow the length limits):
 	"snapshot": {"tech": "Comma-separated tech list", "achievements": ["ach1","ach2","ach3"], "selected_projects": ["proj short 1","proj short 2"]},
 	"experience": [{"company":"Org","title":"Role","period":"YYYY–YYYY","bullets":["accomplishment 1","accomplishment 2"]}],
 	"projects": [{"id":"p1","title":"Short title","url":"https://...","stack":"Go, Postgres","description":"80-220 char description...","bullets":["impact 1","impact 2"]}],
+	"job_application": {"job_title":"Senior Backend Engineer","company_name":"Acme Tech","job_description":"Build Go microservices and improve throughput","job_url":"https://acme.example/jobs/123"},
 	"publications": ["Title — YEAR. One-line summary."],
 	"certifications": [{"name": "Certified X", "issuer": "Org", "date": "2024-01-01", "url": "https://...", "description": "One-line summary"}],
 	"extras": [{"category": "Open Source", "text": "Maintainer of project X"}]

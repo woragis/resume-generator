@@ -101,3 +101,23 @@ func AggregateForUser(ctx context.Context, userID string) (AggregateResult, erro
 
 	return res, nil
 }
+
+// GetJobApplicationByID fetches a single job_application row by its text uuid.
+func GetJobApplicationByID(ctx context.Context, id string) (interface{}, error) {
+	// connect to Jobs DB and fetch single json object
+	if pool, err := connectPool(ctx, "JOBS_DATABASE_URL"); err == nil {
+		defer pool.Close()
+		var raw []byte
+		err := pool.QueryRow(ctx, `SELECT to_jsonb(j) FROM job_applications j WHERE j.id::text=$1 LIMIT 1`, id).Scan(&raw)
+		if err != nil {
+			return nil, err
+		}
+		var out interface{}
+		if err := json.Unmarshal(raw, &out); err != nil {
+			return nil, err
+		}
+		return out, nil
+	} else {
+		return nil, err
+	}
+}
