@@ -1,0 +1,46 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Profile Snapshot",
+  "type": "object",
+  "properties": {
+    "meta": {
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "headline": { "type": "string" },
+        "contact": {
+          "type": "object",
+          "properties": {
+            "email": { "type": "string", "format": "email" },
+            "location": { "type": "string" }
+          }
+        },
+        "social_links": {
+          "type": "object",
+          "additionalProperties": { "type": "string", "format": "uri" }
+        }
+      }
+    },
+    "summary": { "type": "string" },
+    "snapshot": {
+      "type": "object",
+      "properties": {
+        "tech": { "type": "string", "minLength": 10, "maxLength": 120 },
+        "achievements": {
+          "type": "array",
+          "minItems": 3,
+          "items": { "type": "string", "minLength": 40, "maxLength": 140 }
+        },
+        "selected_projects": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "items": { "type": "string", "minLength": 40, "maxLength": 100 }
+        }
+      },
+      "required": ["tech", "achievements", "selected_projects"]
+    }
+  }
+  ,
+  "required": ["meta", "summary", "snapshot"]
+}
