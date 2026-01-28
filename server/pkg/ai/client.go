@@ -192,7 +192,7 @@ Example JSON skeleton (use this structure and follow the length limits):
 // ai-service to preserve and, if necessary, expand those override items to
 // meet schema constraints without changing other sections.
 func (c *Client) EnrichResume(ctx context.Context, baseResume map[string]interface{}, overrides map[string]interface{}) (map[string]interface{}, error) {
-	instr := "You will receive a previously validated resume JSON (base_resume) and a small set of override lists (publications, certifications, extras). Update ONLY the fields publications, certifications, extras: preserve existing values. Ensure publications are strings meeting the schema minLength; if short, expand them into 'Title — YEAR. One-line summary.' For certifications, return structured objects with fields {name, issuer, date, url, description} (name required). For extras, return an array of objects {category, text}. Do NOT modify other fields. Return ONLY the full resume JSON object (same schema) and NOTHING ELSE."
+	instr := "You will receive a previously validated resume JSON (base_resume) and a small set of override lists. Update ONLY the provided override fields and preserve other values. Supported override keys: publications, certifications, extras, snapshot, meta.\n\nFor publications: ensure each item is a descriptive string meeting the schema minLength; if short, expand into 'Title — YEAR. One-line summary.'\nFor certifications: return structured objects {name (required), issuer, date (ISO), url, description (<=140 chars)}.\nFor extras: return objects {category, text (<=140 chars)}.\nFor snapshot: ensure keys 'tech' (10-120 chars), 'achievements' (array with >=3 items, each >=40 chars), and 'selected_projects' (array of 2 items, each 40-100 chars). Expand or synthesize items to meet lengths as needed.\nFor meta: preserve existing meta.name if present; you may add or polish meta.headline and meta.contact but do NOT remove meta.name.\n\nReturn ONLY the full resume JSON object (same schema) and NOTHING ELSE."
 
 	payloadObj := map[string]interface{}{
 		"base_resume":  baseResume,
@@ -274,7 +274,7 @@ func (c *Client) EnrichResume(ctx context.Context, baseResume map[string]interfa
 // risk of modifying other parts of the resume and makes targeted merging
 // safer.
 func (c *Client) EnrichFields(ctx context.Context, overrides map[string]interface{}) (map[string]interface{}, error) {
-	instr := `You will receive a small overrides object containing any of the keys: publications, certifications, extras. Return ONLY a single JSON object with those keys present (if provided) and values formatted exactly to match the schema: publications -> array of strings, certifications -> array of objects {name, issuer, date, url, description}, extras -> array of objects {category, text}. Do NOT include any other fields, commentary, or formatting. Example response: {"publications":["Title — YEAR. One-line summary."],"certifications":[{"name":"Cert A","issuer":"Org","date":"2024-01-01","url":"https://...","description":"One-line"}],"extras":[{"category":"Speaking","text":"Talk at Conf 2024"}]}`
+	instr := `You will receive a small overrides object containing any of the keys: publications, certifications, extras, snapshot, meta. Return ONLY a single JSON object with those keys present (if provided) and values formatted exactly to match the schema:\n- publications -> array of descriptive strings (each >= 40 chars, e.g. "Title — YEAR. One-line summary.")\n- certifications -> array of objects {name (required), issuer, date (ISO), url, description (<=140 chars)}\n- extras -> array of objects {category, text (<=140 chars)}\n- snapshot -> object {tech: string (10-120 chars), achievements: array (>=3 items, each >=40 chars), selected_projects: array (2 items, each 40-100 chars)}\n- meta -> object; preserve meta.name if present and only add/polish headline/contact.\nDo NOT include any other fields, commentary, or formatting. If an input publication is short, expand it into a title+year+one-line summary. Example response: {"publications":["Title — 2023. One-line summary of the article's contributions."],"certifications":[{"name":"Cert A","issuer":"Org","date":"2024-01-01","url":"https://...","description":"One-line"}],"extras":[{"category":"Speaking","text":"Talk at Conf 2024"}],"snapshot":{"tech":"Go, GKE","achievements":["Achievement 1 expanded to 40+ chars...","Achievement 2 expanded to 40+ chars...","Achievement 3 expanded to 40+ chars..."],"selected_projects":["Project 1 — short summary 40+ chars","Project 2 — short summary 40+ chars"]}}`
 
 	payloadObj := map[string]interface{}{
 		"overrides":    overrides,
@@ -348,4 +348,145 @@ func (c *Client) EnrichFields(ctx context.Context, overrides map[string]interfac
 	}
 
 	return fields, nil
+}
+
+// FormatExperienceProjects calls the AI to produce only the experience and
+// projects sections. It returns a map with keys "experience" and "projects".
+func (c *Client) FormatExperienceProjects(ctx context.Context, payload map[string]interface{}) (map[string]interface{}, error) {
+	// try to load a small schema to keep the prompt focused
+	schemaBytes := []byte{}
+	if b, err := os.ReadFile("templates/schema/experience.schema.json"); err == nil {
+		schemaBytes = b
+	}
+	instr := "Return ONLY a single JSON object with keys 'experience' and 'projects' that conform to the provided schema. For each experience entry include an optional 'summary' field: a concise 40-240 character paragraph describing the role and impact. Do NOT include any extra text."
+	if len(schemaBytes) > 0 {
+		instr = instr + "\n\nJSON-SCHEMA:\n" + string(schemaBytes)
+	}
+	userCtx := map[string]interface{}{"payload": payload, "instructions": instr}
+	reqObj := map[string]interface{}{"agent": "auto", "input": "Format experience and projects:\n" + mustMarshal(userCtx)}
+	b, _ := json.Marshal(reqObj)
+	fmt.Printf("ai.client: FormatExperienceProjects POST %s/v1/chat payload=%s\n", c.BaseURL, string(b))
+	resp, err := c.doPostWithRetry(ctx, "/v1/chat", b)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	rb, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	fmt.Printf("ai.client: FormatExperienceProjects response status=%d body=%s\n", resp.StatusCode, string(rb))
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("ai-service returned non-200 status: %d", resp.StatusCode)
+	}
+	var chatResp struct{ Agent string `json:"agent"`; Output string `json:"output"` }
+	if err := json.Unmarshal(rb, &chatResp); err != nil {
+		return nil, err
+	}
+	var out map[string]interface{}
+	if err := json.Unmarshal([]byte(chatResp.Output), &out); err != nil {
+		// try substring
+		s := chatResp.Output
+		start := -1; end := -1
+		for i, r := range s { if r == '{' { start = i; break } }
+		for i := len(s)-1; i >= 0; i-- { if s[i] == '}' { end = i; break } }
+		if start >= 0 && end > start { sub := s[start:end+1]; if err2 := json.Unmarshal([]byte(sub), &out); err2 == nil { return out, nil } }
+		return nil, fmt.Errorf("ai-service returned non-json content: %w", err)
+	}
+	return out, nil
+}
+
+// FormatProfileSnapshot returns profile/meta/summary and snapshot fields.
+func (c *Client) FormatProfileSnapshot(ctx context.Context, payload map[string]interface{}) (map[string]interface{}, error) {
+	schemaBytes := []byte{}
+	if b, err := os.ReadFile("templates/schema/profile.schema.json"); err == nil {
+		schemaBytes = b
+	}
+	instr := "Return ONLY a single JSON object containing meta, summary, and snapshot fields that conform to the provided schema. Do NOT include extra text. Preserve meta.social_links and do not modify provided URLs."
+	// strengthen snapshot requirements to reduce schema-drift and encourage
+	// the AI to always produce the minimal expected fields
+	instr = instr + "\n\nREQUIREMENTS FOR snapshot: provide exactly 3 or more achievements (array length >= 3), each achievement must be >= 40 characters; include 'selected_projects' as an array of 2 short project summaries (each >= 40 chars and <= 100 chars)."
+	if len(schemaBytes) > 0 { instr = instr + "\n\nJSON-SCHEMA:\n" + string(schemaBytes) }
+	userCtx := map[string]interface{}{"payload": payload, "instructions": instr}
+	reqObj := map[string]interface{}{"agent": "auto", "input": "Format profile and snapshot:\n" + mustMarshal(userCtx)}
+	b, _ := json.Marshal(reqObj)
+	fmt.Printf("ai.client: FormatProfileSnapshot POST %s/v1/chat payload=%s\n", c.BaseURL, string(b))
+	resp, err := c.doPostWithRetry(ctx, "/v1/chat", b)
+	if err != nil { return nil, err }
+	defer resp.Body.Close()
+	rb, err := io.ReadAll(resp.Body); if err != nil { return nil, err }
+	fmt.Printf("ai.client: FormatProfileSnapshot response status=%d body=%s\n", resp.StatusCode, string(rb))
+	if resp.StatusCode != http.StatusOK { return nil, fmt.Errorf("ai-service returned non-200 status: %d", resp.StatusCode) }
+	var chatResp struct{ Agent string `json:"agent"`; Output string `json:"output"` }
+	if err := json.Unmarshal(rb, &chatResp); err != nil { return nil, err }
+	var out map[string]interface{}
+	if err := json.Unmarshal([]byte(chatResp.Output), &out); err != nil {
+		s := chatResp.Output; start := -1; end := -1
+		for i, r := range s { if r == '{' { start = i; break } }
+		for i := len(s)-1; i >= 0; i-- { if s[i] == '}' { end = i; break } }
+		if start >= 0 && end > start { sub := s[start:end+1]; if err2 := json.Unmarshal([]byte(sub), &out); err2 == nil { return out, nil } }
+		return nil, fmt.Errorf("ai-service returned non-json content: %w", err)
+	}
+	return out, nil
+}
+
+// FormatPublicationsCertsExtras returns publications/certifications/extras only.
+func (c *Client) FormatPublicationsCertsExtras(ctx context.Context, payload map[string]interface{}) (map[string]interface{}, error) {
+	schemaBytes := []byte{}
+	if b, err := os.ReadFile("templates/schema/publications.schema.json"); err == nil { schemaBytes = b }
+	instr := "Return ONLY a single JSON object with keys 'publications', 'certifications', and 'extras' that conform to the provided schema.\n\nFor publications: return an array of descriptive strings (each >= 40 chars) in the form 'Title — YEAR. One-line summary.' If a publication item is short, expand it into a descriptive summary.\n\nFor certifications: return structured objects with fields {name (required), issuer, date (ISO), url, description (max 140 chars)}.\n\nFor extras: return objects {category, text} where text <= 140 chars.\n\nDo NOT include any other fields, commentary, or non-JSON text."
+	if len(schemaBytes) > 0 { instr = instr + "\n\nJSON-SCHEMA:\n" + string(schemaBytes) }
+	userCtx := map[string]interface{}{"payload": payload, "instructions": instr}
+	reqObj := map[string]interface{}{"agent": "auto", "input": "Format publications/certifications/extras:\n" + mustMarshal(userCtx)}
+	b, _ := json.Marshal(reqObj)
+	fmt.Printf("ai.client: FormatPublicationsCertsExtras POST %s/v1/chat payload=%s\n", c.BaseURL, string(b))
+	resp, err := c.doPostWithRetry(ctx, "/v1/chat", b)
+	if err != nil { return nil, err }
+	defer resp.Body.Close()
+	rb, err := io.ReadAll(resp.Body); if err != nil { return nil, err }
+	fmt.Printf("ai.client: FormatPublicationsCertsExtras response status=%d body=%s\n", resp.StatusCode, string(rb))
+	if resp.StatusCode != http.StatusOK { return nil, fmt.Errorf("ai-service returned non-200 status: %d", resp.StatusCode) }
+	var chatResp struct{ Agent string `json:"agent"`; Output string `json:"output"` }
+	if err := json.Unmarshal(rb, &chatResp); err != nil { return nil, err }
+	var out map[string]interface{}
+	if err := json.Unmarshal([]byte(chatResp.Output), &out); err != nil {
+		s := chatResp.Output; start := -1; end := -1
+		for i, r := range s { if r == '{' { start = i; break } }
+		for i := len(s)-1; i >= 0; i-- { if s[i] == '}' { end = i; break } }
+		if start >= 0 && end > start { sub := s[start:end+1]; if err2 := json.Unmarshal([]byte(sub), &out); err2 == nil { return out, nil } }
+		return nil, fmt.Errorf("ai-service returned non-json content: %w", err)
+	}
+	return out, nil
+}
+
+// FormatSummaryMeta returns a short polished summary and headline only.
+func (c *Client) FormatSummaryMeta(ctx context.Context, payload map[string]interface{}) (map[string]interface{}, error) {
+	instr := "Return ONLY a single JSON object with keys 'summary' and 'meta' (meta.headline/contact) suitable for a resume. Keep summary 80-220 chars. Do not change other fields."
+	userCtx := map[string]interface{}{"payload": payload, "instructions": instr}
+	reqObj := map[string]interface{}{"agent": "auto", "input": "Polish summary and meta:\n" + mustMarshal(userCtx)}
+	b, _ := json.Marshal(reqObj)
+	fmt.Printf("ai.client: FormatSummaryMeta POST %s/v1/chat payload=%s\n", c.BaseURL, string(b))
+	resp, err := c.doPostWithRetry(ctx, "/v1/chat", b)
+	if err != nil { return nil, err }
+	defer resp.Body.Close()
+	rb, err := io.ReadAll(resp.Body); if err != nil { return nil, err }
+	fmt.Printf("ai.client: FormatSummaryMeta response status=%d body=%s\n", resp.StatusCode, string(rb))
+	if resp.StatusCode != http.StatusOK { return nil, fmt.Errorf("ai-service returned non-200 status: %d", resp.StatusCode) }
+	var chatResp struct{ Agent string `json:"agent"`; Output string `json:"output"` }
+	if err := json.Unmarshal(rb, &chatResp); err != nil { return nil, err }
+	var out map[string]interface{}
+	if err := json.Unmarshal([]byte(chatResp.Output), &out); err != nil {
+		s := chatResp.Output; start := -1; end := -1
+		for i, r := range s { if r == '{' { start = i; break } }
+		for i := len(s)-1; i >= 0; i-- { if s[i] == '}' { end = i; break } }
+		if start >= 0 && end > start { sub := s[start:end+1]; if err2 := json.Unmarshal([]byte(sub), &out); err2 == nil { return out, nil } }
+		return nil, fmt.Errorf("ai-service returned non-json content: %w", err)
+	}
+	return out, nil
+}
+
+// mustMarshal is a tiny helper for embedding example payloads in prompts.
+func mustMarshal(v interface{}) string {
+	b, _ := json.Marshal(v)
+	return string(b)
 }
