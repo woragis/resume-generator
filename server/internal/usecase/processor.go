@@ -156,13 +156,191 @@ func (p *Processor) Process(ctx context.Context, job *domain.ResumeJob) error {
 			}
 		}
 
-		resumeMap, warnings, synthesized, err := p.aiClient.FormatResume(ctx, rawForAI)
-		if err != nil {
-			return err
-		}
+		resumeMap := map[string]interface{}{}
+		var warnings []string
+		synthesized := false
+		var baseResume map[string]interface{}
 
-		// Keep a copy of the base resume returned from the first AI call.
-		baseResume := resumeMap
+		// Optional split AI flow: enabled by default unless explicitly
+		// disabled via AI_SPLIT_FLOW=false. When enabled we perform focused
+		// calls per-section to reduce schema drift. Otherwise fall back to
+		// the original single-call FormatResume.
+		if os.Getenv("AI_SPLIT_FLOW") != "false" {
+			// prepare payload containing aggregated and overrides
+			payload := map[string]interface{}{}
+			if m, ok := rawForAI.(map[string]interface{}); ok {
+				payload = m
+			} else {
+				payload["aggregated"] = rawForAI
+			}
+
+			// A: experience + projects
+			if p.aiClient != nil {
+				if out, e := p.aiClient.FormatExperienceProjects(ctx, payload); e == nil && out != nil {
+					// validate against small schema
+					if err := model.ValidateMapWithSchema("templates/schema/experience.schema.json", out); err != nil {
+						fmt.Printf("processor: experience/projects validation failed: %v\n", err)
+						// attempt focused enrichment via EnrichResume to fix experience/projects
+						if p.aiClient != nil {
+							overrides := map[string]interface{}{}
+							if ex, ok := out["experience"]; ok { overrides["experience"] = ex }
+							if pr, ok := out["projects"]; ok { overrides["projects"] = pr }
+							if len(overrides) > 0 {
+								if enriched, enErr := p.aiClient.EnrichResume(ctx, resumeMap, overrides); enErr == nil && enriched != nil {
+									tmp := map[string]interface{}{}
+									if ex, ok := enriched["experience"]; ok { tmp["experience"] = ex }
+									if pr, ok := enriched["projects"]; ok { tmp["projects"] = pr }
+									if err2 := model.ValidateMapWithSchema("templates/schema/experience.schema.json", tmp); err2 == nil {
+										for k, v := range tmp { resumeMap[k] = v }
+									} else {
+										fmt.Printf("processor: experience enrichment still invalid: %v\n", err2)
+									}
+								} else {
+									fmt.Printf("processor: EnrichResume for experience failed: %v\n", enErr)
+								}
+							}
+						}
+					} else {
+						for k, v := range out {
+							resumeMap[k] = v
+						}
+					}
+				} else if e != nil {
+					fmt.Printf("processor: FormatExperienceProjects failed: %v\n", e)
+				}
+				// B: profile + snapshot
+				if out, e := p.aiClient.FormatProfileSnapshot(ctx, payload); e == nil && out != nil {
+					// validate profile snapshot small schema
+					if err := model.ValidateMapWithSchema("templates/schema/profile.schema.json", out); err != nil {
+						fmt.Printf("processor: profile/snapshot validation failed: %v\n", err)
+						// attempt focused enrichment first (EnrichFields) for snapshot/meta
+						if p.aiClient != nil {
+							overrides := map[string]interface{}{}
+							if ss, ok := out["snapshot"]; ok { overrides["snapshot"] = ss }
+							if mm, ok := out["meta"]; ok { overrides["meta"] = mm }
+							if len(overrides) > 0 {
+								// try targeted EnrichFields which returns only the requested keys
+								if fields, ferr := p.aiClient.EnrichFields(ctx, overrides); ferr == nil && fields != nil {
+									// merge returned fields into out
+									if ss, ok := fields["snapshot"]; ok { out["snapshot"] = ss }
+									if mm, ok := fields["meta"]; ok { out["meta"] = mm }
+									if err2 := model.ValidateMapWithSchema("templates/schema/profile.schema.json", out); err2 == nil {
+										for k, v := range out { resumeMap[k] = v }
+										continue
+									} else {
+										fmt.Printf("processor: profile EnrichFields still invalid: %v\n", err2)
+									}
+								}
+								// fallback: broad EnrichResume
+								if enriched, enErr := p.aiClient.EnrichResume(ctx, resumeMap, overrides); enErr == nil && enriched != nil {
+									if ss, ok := enriched["snapshot"]; ok { out["snapshot"] = ss }
+									if mm, ok := enriched["meta"]; ok { out["meta"] = mm }
+									if err2 := model.ValidateMapWithSchema("templates/schema/profile.schema.json", out); err2 == nil {
+										for k, v := range out { resumeMap[k] = v }
+									} else {
+										fmt.Printf("processor: profile enrichment still invalid: %v\n", err2)
+									}
+								} else {
+									fmt.Printf("processor: EnrichFields/EnrichResume for profile failed: %v\n", enErr)
+								}
+							}
+						}
+					} else {
+						for k, v := range out {
+							resumeMap[k] = v
+						}
+					}
+				} else if e != nil {
+					fmt.Printf("processor: FormatProfileSnapshot failed: %v\n", e)
+				}
+				// C: publications + certifications + extras
+				if out, e := p.aiClient.FormatPublicationsCertsExtras(ctx, payload); e == nil && out != nil {
+					if err := model.ValidateMapWithSchema("templates/schema/publications.schema.json", out); err != nil {
+						fmt.Printf("processor: publications/certs/extras validation failed: %v\n", err)
+						// try focused enrichment via EnrichFields (targeted) or EnrichResume fallback
+						if p.aiClient != nil {
+							if fields, ferr := p.aiClient.EnrichFields(ctx, out); ferr == nil && fields != nil {
+								// validate enriched fields merged into a tmp map
+								tmp := map[string]interface{}{"publications": fields["publications"], "certifications": fields["certifications"], "extras": fields["extras"]}
+								if err2 := model.ValidateMapWithSchema("templates/schema/publications.schema.json", tmp); err2 == nil {
+									for k, v := range tmp { resumeMap[k] = v }
+								} else {
+									fmt.Printf("processor: publications enrichment still invalid: %v\n", err2)
+								}
+							} else {
+								// fallback to broad enrichment
+								if enriched, enErr := p.aiClient.EnrichResume(ctx, resumeMap, map[string]interface{}{"publications": out["publications"], "certifications": out["certifications"], "extras": out["extras"]}); enErr == nil && enriched != nil {
+									tmp := map[string]interface{}{}
+									if pubs, ok := enriched["publications"]; ok { tmp["publications"] = pubs }
+									if certs, ok := enriched["certifications"]; ok { tmp["certifications"] = certs }
+									if extras, ok := enriched["extras"]; ok { tmp["extras"] = extras }
+									if err2 := model.ValidateMapWithSchema("templates/schema/publications.schema.json", tmp); err2 == nil {
+										for k, v := range tmp { resumeMap[k] = v }
+									} else {
+										fmt.Printf("processor: publications broad enrichment still invalid: %v\n", err2)
+									}
+								} else {
+									fmt.Printf("processor: EnrichFields/EnrichResume for publications failed: %v\n", ferr)
+								}
+							}
+						}
+					} else {
+						for k, v := range out {
+							resumeMap[k] = v
+						}
+					}
+				} else if e != nil {
+					fmt.Printf("processor: FormatPublicationsCertsExtras failed: %v\n", e)
+				}
+				// D: summary + meta polish (final harmonization)
+				// assemble a lightweight assembled payload to give context
+				assembled := map[string]interface{}{"assembled": resumeMap, "aggregated": payload["aggregated"]}
+				if out, e := p.aiClient.FormatSummaryMeta(ctx, assembled); e == nil && out != nil {
+					// handle summary (respect length) and merge meta rather than overwrite
+					if s, ok := out["summary"].(string); ok {
+						if len(s) < 80 || len(s) > 220 {
+							fmt.Printf("processor: summary length out of bounds: %d\n", len(s))
+						} else {
+							resumeMap["summary"] = s
+						}
+					}
+					// merge meta fields into existing meta, preserving name if present
+					if metaRaw, ok := out["meta"].(map[string]interface{}); ok {
+						metaObj := map[string]interface{}{}
+						if m, ok2 := resumeMap["meta"].(map[string]interface{}); ok2 {
+							for k, v := range m { metaObj[k] = v }
+						}
+						for k, v := range metaRaw {
+							if k == "name" {
+								if _, has := metaObj["name"]; !has || metaObj["name"] == "" {
+									metaObj["name"] = v
+								}
+							} else {
+								metaObj[k] = v
+							}
+						}
+						resumeMap["meta"] = metaObj
+					}
+				} else if e != nil {
+					fmt.Printf("processor: FormatSummaryMeta failed: %v\n", e)
+				}
+			}
+			// keep baseResume as a snapshot for targeted merges later
+			baseResume = map[string]interface{}{}
+			for k, v := range resumeMap {
+				baseResume[k] = v
+			}
+			} else {
+				resumeMap, warnings, synthesized, err = p.aiClient.FormatResume(ctx, rawForAI)
+				if err != nil {
+					return err
+				}
+				// Keep a copy of the base resume returned from the first AI call.
+				baseResume = map[string]interface{}{}
+				for k, v := range resumeMap {
+					baseResume[k] = v
+				}
+			}
 
 		// If overrides supplied short lists, ask AI for a focused enrichment step
 		if m, ok := rawForAI.(map[string]interface{}); ok {
@@ -237,9 +415,11 @@ func (p *Processor) Process(ctx context.Context, job *domain.ResumeJob) error {
 							if arr, ok := merged["publications"].([]interface{}); ok {
 								for i, it := range arr {
 									if s, ok := it.(string); ok {
-										if len(strings.TrimSpace(s)) < 40 {
-											arr[i] = s + " — A published article describing scalable architecture, performance improvements, and key takeaways."
-										}
+										// leave short publications as-is; we'll ask the AI to
+										// expand them via EnrichFields instead of synthesizing here.
+										_ = s
+									} else {
+										arr[i] = fmt.Sprintf("%v", it)
 									}
 								}
 								merged["publications"] = arr
@@ -278,9 +458,10 @@ func (p *Processor) Process(ctx context.Context, job *domain.ResumeJob) error {
 				if arr, ok := m["publications"].([]interface{}); ok {
 					for i, it := range arr {
 						if s, ok := it.(string); ok {
-							if len(strings.TrimSpace(s)) < 40 {
-								arr[i] = s + " — A published article describing scalable architecture, performance improvements, and key takeaways."
-							}
+							// Leave short publications as-is; EnrichFields will
+							// be used to expand them via AI rather than synthesizing
+							// text locally here.
+							_ = s
 						} else {
 							arr[i] = fmt.Sprintf("%v", it)
 						}
@@ -389,6 +570,76 @@ func (p *Processor) Process(ctx context.Context, job *domain.ResumeJob) error {
 			return fmt.Errorf("ai response validation failed: %w", err)
 		}
 
+		// HARD-MERGE: ensure meta and social_links are present from aggregated
+		// If the AI omitted meta.social_links, copy from the first aggregated
+		// profile (aggregator.go already normalizes profile.social_links).
+		if aggregated != nil {
+			if aggMap, ok := aggregated.(repo.AggregateResult); ok {
+				// find first profile's social_links if present
+				var profileMeta map[string]interface{}
+				if pRaw, ok := aggMap["profiles"]; ok {
+					switch parr := pRaw.(type) {
+					case []interface{}:
+						if len(parr) > 0 {
+							if first, ok := parr[0].(map[string]interface{}); ok {
+								// profile might contain a nested `meta` or flat fields
+								if m, ok := first["meta"].(map[string]interface{}); ok {
+									profileMeta = m
+								} else {
+									profileMeta = map[string]interface{}{}
+									// copy some common fields if present (include social_links)
+									for _, k := range []string{"name", "headline", "contact", "website", "bio", "social_links"} {
+										if v, ok := first[k]; ok {
+											profileMeta[k] = v
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+				if profileMeta != nil {
+					// ensure resumeMap.meta exists
+					metaObj := map[string]interface{}{}
+					if m, ok := resumeMap["meta"].(map[string]interface{}); ok {
+						metaObj = m
+					}
+					// copy missing name/headline/contact
+					if name, ok := profileMeta["name"].(string); ok {
+						if _, has := metaObj["name"]; !has || metaObj["name"] == "" {
+							metaObj["name"] = name
+						}
+					}
+					if head, ok := profileMeta["headline"].(string); ok {
+						if _, has := metaObj["headline"]; !has || metaObj["headline"] == "" {
+							metaObj["headline"] = head
+						}
+					}
+					if c, ok := profileMeta["contact"].(map[string]interface{}); ok {
+						if _, has := metaObj["contact"]; !has || metaObj["contact"] == nil {
+							metaObj["contact"] = c
+						}
+					}
+					// ensure social_links
+					if sl, ok := profileMeta["social_links"]; ok {
+						has := false
+						if msl, ok2 := metaObj["social_links"]; ok2 {
+							// treat empty object as missing
+							if mm, ok3 := msl.(map[string]interface{}); ok3 {
+								if len(mm) > 0 {
+									has = true
+								}
+							}
+						}
+						if !has {
+							metaObj["social_links"] = sl
+						}
+					}
+					resumeMap["meta"] = metaObj
+				}
+			}
+		}
+
 		// ensure important aggregated sections are present if AI omitted them
 		if aggregated != nil {
 			if aggMap, ok := aggregated.(repo.AggregateResult); ok {
@@ -480,6 +731,11 @@ func (p *Processor) Process(ctx context.Context, job *domain.ResumeJob) error {
 
 		// replace job.Profile with validated and merged resumeMap for template rendering
 		job.Profile = resumeMap
+
+		// All per-experience summaries must be produced by the AI.
+		// The processor no longer synthesizes role summaries locally; if the
+		// AI omitted summaries, we will attempt a focused EnrichFields call
+		// to request the missing fields instead of fabricating them here.
 		if job.Metadata == nil {
 			job.Metadata = map[string]interface{}{}
 		}
