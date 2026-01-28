@@ -226,7 +226,6 @@ func (p *Processor) Process(ctx context.Context, job *domain.ResumeJob) error {
 									if mm, ok := fields["meta"]; ok { out["meta"] = mm }
 									if err2 := model.ValidateMapWithSchema("templates/schema/profile.schema.json", out); err2 == nil {
 										for k, v := range out { resumeMap[k] = v }
-										continue
 									} else {
 										fmt.Printf("processor: profile EnrichFields still invalid: %v\n", err2)
 									}
