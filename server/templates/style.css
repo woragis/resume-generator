@@ -52,6 +52,23 @@ body {
   margin: 0 auto 1rem auto;
   padding: 1rem;
 }
+
+.summary {
+  padding-left: 0.6rem;
+  border-left: 3px solid var(--accent-300);
+}
+
+.summary p {
+  font-size: 0.95rem;
+  line-height: 1.5;
+  color: var(--muted-dark);
+}
+
+.snapshot {
+  padding-left: 0.6rem;
+  border-left: 3px solid var(--accent-300);
+  padding-top: 0.25rem;
+}
 .header {
   border-bottom: 1px solid rgba(46, 91, 115, 0.1);
   padding-bottom: var(--space-sm);
@@ -101,31 +118,54 @@ body {
 }
 
 h2 {
-  color: var(--accent);
+  color: var(--accent-700);
   font-size: var(--fs-md);
   margin: var(--space-md) 0 0.35rem 0;
+  font-weight: 700;
 }
 h3 {
-  font-size: var(--fs-sm);
-  margin: var(--space-sm) 0;
+  font-size: 0.95rem;
+  margin: 0.6rem 0 0.35rem 0;
   color: var(--accent);
+  font-weight: 600;
 }
 
 .main .role {
   margin-bottom: var(--space-md);
   page-break-inside: avoid;
+  padding-left: 0.6rem;
+  border-left: 3px solid var(--accent-300);
 }
 .role-head {
   font-weight: 600;
   font-size: var(--fs-sm);
+  color: var(--muted-dark);
+}
+.role-summary {
+  padding: 0.35rem 0.45rem;
+  background: rgba(46, 91, 115, 0.03);
+  border-radius: 4px;
+  margin: 0.35rem 0 0.35rem 0;
+  font-size: 0.92rem;
+  line-height: 1.4;
 }
 ul {
-  margin: 0.25rem 0 0 1.125rem;
+  margin: 0.35rem 0 0 1.125rem;
   padding: 0;
 }
 li {
-  margin: 0.4rem 0;
+  margin: 0.45rem 0;
   font-size: var(--fs-sm);
+  line-height: 1.4;
+  color: var(--muted-dark);
+}
+
+.achievements li,
+.selected-projects li {
+  padding-left: 0.35rem;
+  border-left: 2px solid rgba(106, 160, 173, 0.3);
+  margin-left: -0.35rem;
+  padding-left: 0.6rem;
 }
 
 .chips {
@@ -345,12 +385,62 @@ a {
   margin-left: 0.15rem;
 }
 .extras-compact {
-  font-size: 0.85rem;
-  color: var(--muted-dark);
-  margin-top: 0.25rem;
+  font-size: 0.92rem;
+  color: var(--text);
+  margin-top: 0.35rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  align-items: center;
 }
+
+/* Color-coded extras grid by category */
+.extras-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 0.6rem;
+  margin-top: 0.5rem;
+}
+
 .extra-token {
-  margin-right: 0.4rem;
+  display: flex;
+  flex-direction: column;
+  padding: 0.45rem 0.55rem;
+  border-radius: 6px;
+  background: rgba(106, 160, 173, 0.08);
+  border-left: 3px solid var(--accent-300);
+  color: var(--text);
+  line-height: 1.3;
+  font-size: 0.89rem;
+  transition: all 0.2s ease;
+}
+
+/* Category-specific color coding */
+.extra-token[data-category="open-source"] {
+  border-left-color: #059669;
+  background: rgba(5, 150, 105, 0.06);
+}
+.extra-token[data-category="public-talk"] {
+  border-left-color: #d97706;
+  background: rgba(217, 119, 6, 0.06);
+}
+.extra-token[data-category="online-course"] {
+  border-left-color: #7c3aed;
+  background: rgba(124, 58, 237, 0.06);
+}
+.extra-token[data-category="award"] {
+  border-left-color: #ca8a04;
+  background: rgba(202, 138, 4, 0.06);
+}
+.extra-token[data-category="volunteering"] {
+  border-left-color: #0891b2;
+  background: rgba(8, 145, 178, 0.06);
+}
+
+.extra-token strong {
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 0.25rem;
 }
 
 /* Hide link icon in compact main view to save space */
@@ -358,9 +448,35 @@ a {
   display: none;
 }
 
+/* Improved publications styling */
+.pub-list {
+  list-style: none;
+  padding: 0;
+  margin: 0.5rem 0 0 0;
+}
+.pub-item {
+  padding: 0.4rem 0.5rem;
+  margin: 0.4rem 0;
+  border-left: 3px solid var(--accent-300);
+  background: rgba(46, 91, 115, 0.03);
+  border-radius: 4px;
+  font-size: 0.92rem;
+  line-height: 1.4;
+  color: var(--muted-dark);
+}
+
+/* Certifications subheading styling */
+.certs-subheading {
+  margin-top: 1rem;
+  margin-bottom: 0.35rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--accent);
+}
+
 /* Appendix: full cert details (printed/verification) */
 .cert-appendix {
-  margin-top: 0.5rem;
+  margin-top: 0.75rem;
   font-size: 0.85rem;
   color: var(--muted-dark);
 }
@@ -396,6 +512,21 @@ a {
   .cert-url a {
     display: none !important;
   }
+  /* Maintain color-coded extras in print */
+  .extras-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 0.5rem;
+  }
+  .extra-token {
+    padding: 0.35rem 0.45rem;
+    font-size: 0.88rem;
+  }
+  .pub-item {
+    padding: 0.35rem 0.45rem;
+    margin: 0.3rem 0;
+    font-size: 0.9rem;
+  }
 }
 .extras {
   list-style: none;
@@ -407,19 +538,20 @@ a {
 }
 .extras li {
   font-size: var(--fs-sm);
-  color: var(--muted-dark);
+  color: var(--text);
 }
 
 /* Compact badges for category labels */
 .extras li strong {
   display: inline-block;
-  background: var(--accent-300);
+  background: var(--accent-700);
   color: white;
-  padding: 0.08rem 0.45rem;
+  padding: 0.12rem 0.5rem;
   border-radius: 999px;
-  font-weight: 600;
-  font-size: 0.72rem;
+  font-weight: 700;
+  font-size: 0.78rem;
   margin-right: 0.5rem;
+  letter-spacing: 0.02em;
 }
 
 /* For narrower print layouts we keep two columns where possible; media query kept for larger screens */
@@ -427,6 +559,10 @@ a {
   .certifications {
     grid-template-columns: repeat(2, 1fr);
   }
+  .extras-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
 }
 
 @media print {
