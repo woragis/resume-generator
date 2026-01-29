@@ -1,6 +1,6 @@
 module resume-generator
 
-go 1.24
+go 1.24.0
 
 require (
 	github.com/chromedp/cdproto v0.0.0-20250803210736-d308e07a266d
@@ -36,7 +36,8 @@ require (
 	github.com/valyala/tcplisten v1.0.0 // indirect
 	github.com/xeipuuv/gojsonpointer v0.0.0-20180127040702-4e3ac2762d5f // indirect
 	github.com/xeipuuv/gojsonreference v0.0.0-20180127040603-bd5ef7bd5415 // indirect
-	golang.org/x/crypto v0.20.0 // indirect
-	golang.org/x/sys v0.34.0 // indirect
-	golang.org/x/text v0.14.0 // indirect
+	golang.org/x/crypto v0.47.0 // indirect
+	golang.org/x/net v0.49.0 // indirect
+	golang.org/x/sys v0.40.0 // indirect
+	golang.org/x/text v0.33.0 // indirect
 )

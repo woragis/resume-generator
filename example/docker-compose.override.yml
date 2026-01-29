@@ -1,0 +1,9 @@
+version: '3.8'
+
+services:
+  redis:
+    ports: []
+    # avoid binding host port when local redis already exists
+  postgres-management:
+    ports: []
+    # avoid binding host port to prevent conflicts in shared dev environment

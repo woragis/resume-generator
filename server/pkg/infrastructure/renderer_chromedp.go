@@ -15,15 +15,44 @@ type ChromedpRenderer struct{}
 func NewChromedpRenderer() *ChromedpRenderer { return &ChromedpRenderer{} }
 
 func (r *ChromedpRenderer) RenderHTMLToPDF(ctx context.Context, html string) ([]byte, error) {
-	// prepare exec allocator with optional CHROME_PATH
+	// Create a temporary directory first (used for user-data-dir and files)
+	tmpDir, err := os.MkdirTemp("/tmp", "resume-")
+	if err != nil {
+		return nil, err
+	}
+	defer os.RemoveAll(tmpDir)
+
+	// prepare exec allocator with optional CHROME_PATH and a dedicated user-data-dir
 	opts := append(chromedp.DefaultExecAllocatorOptions[:],
 		chromedp.Flag("headless", true),
 		chromedp.Flag("no-sandbox", true),
+		chromedp.Flag("disable-setuid-sandbox", true),
 		chromedp.Flag("disable-gpu", true),
 		chromedp.Flag("disable-dev-shm-usage", true),
+		chromedp.Flag("remote-debugging-port", 9222),
+		chromedp.Flag("single-process", false),
+		chromedp.Flag("disable-extensions", true),
+		chromedp.UserDataDir(tmpDir),
 	)
+
+	// If CHROME_PATH isn't set, try common locations inside containers
 	if p := os.Getenv("CHROME_PATH"); p != "" {
 		opts = append(opts, chromedp.ExecPath(p))
+	} else {
+		common := []string{
+			"/usr/bin/google-chrome-stable",
+			"/usr/bin/google-chrome",
+			"/usr/bin/chromium",
+			"/usr/bin/chromium-browser",
+			"/snap/bin/chromium",
+			"/usr/bin/brave-browser",
+		}
+		for _, p := range common {
+			if _, err := os.Stat(p); err == nil {
+				opts = append(opts, chromedp.ExecPath(p))
+				break
+			}
+		}
 	}
 
 	allocCtx, cancel := chromedp.NewExecAllocator(ctx, opts...)
@@ -32,17 +61,11 @@ func (r *ChromedpRenderer) RenderHTMLToPDF(ctx context.Context, html string) ([]
 	cctx, cancelCtx := chromedp.NewContext(allocCtx)
 	defer cancelCtx()
 
-	// ensure Chrome starts
-	ctx2, cancel2 := context.WithTimeout(cctx, 60*time.Second)
+	// ensure Chrome starts (give extra time for cold start)
+	ctx2, cancel2 := context.WithTimeout(cctx, 120*time.Second)
 	defer cancel2()
 
-	// write HTML to a temporary directory and copy style.css if available
-	tmpDir, err := os.MkdirTemp("/tmp", "resume-")
-	if err != nil {
-		return nil, err
-	}
-	defer os.RemoveAll(tmpDir)
-
+	// write HTML and copy style.css into the temp directory
 	htmlPath := filepath.Join(tmpDir, "index.html")
 	if err := os.WriteFile(htmlPath, []byte(html), 0o644); err != nil {
 		return nil, err
@@ -58,6 +81,8 @@ func (r *ChromedpRenderer) RenderHTMLToPDF(ctx context.Context, html string) ([]
 
 	var pdfBuf []byte
 	htmlURL := "file://" + htmlPath
+
+	// Try to run navigation + print; chromedp will start Chrome via the allocator
 	err = chromedp.Run(ctx2,
 		chromedp.Navigate(htmlURL),
 		chromedp.WaitReady("body", chromedp.ByQuery),

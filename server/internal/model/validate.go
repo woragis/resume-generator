@@ -33,3 +33,28 @@ func ValidateMap(m map[string]interface{}) error {
 	}
 	return fmt.Errorf("schema validation failed: %s", msgs)
 }
+
+// ValidateMapWithSchema validates a map against a provided schema file
+// relative to the repository root (e.g., "templates/schema/experience.schema.json").
+func ValidateMapWithSchema(schemaRel string, m map[string]interface{}) error {
+	abs, err := filepath.Abs(schemaRel)
+	if err != nil {
+		return err
+	}
+	schemaPath := "file://" + filepath.ToSlash(abs)
+	schemaLoader := gojsonschema.NewReferenceLoader(schemaPath)
+	docLoader := gojsonschema.NewGoLoader(m)
+
+	res, err := gojsonschema.Validate(schemaLoader, docLoader)
+	if err != nil {
+		return err
+	}
+	if res.Valid() {
+		return nil
+	}
+	msgs := ""
+	for _, e := range res.Errors() {
+		msgs += fmt.Sprintf("%s; ", e.String())
+	}
+	return fmt.Errorf("schema validation failed: %s", msgs)
+}

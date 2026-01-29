@@ -5,12 +5,31 @@
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>{{ index (index .Profile "meta") "name" }} — Resume</title>
     <link rel="stylesheet" href="style.css" />
+    <style>
+      /* Override: force-hide any cert link/icon or inline cert URLs on screen */
+      .cert-link, .cert-toggle { display: none !important; }
+      @media screen {
+        .cert-url a { display: none !important; }
+      }
+    </style>
   </head>
   <body>
     <div class="page">
       <header class="header">
         <div class="name">{{ index (index .Profile "meta") "name" }}</div>
-        <div class="meta">{{ index (index .Profile "meta") "headline" }}{{ with index (index .Profile "meta") "contact" }} — {{ index . "email" }}{{ end }}</div>
+        <div class="meta">
+          {{ index (index .Profile "meta") "headline" }}
+          {{ with index (index .Profile "meta") "contact" }} — {{ index . "email" }}{{ end }}
+
+          {{ with index (index .Profile "meta") "social_links" }}
+            <span class="social-links">
+              {{ with index . "linkedin" }}<a class="social-link linkedin" href="{{ . }}" target="_blank" rel="noopener">LinkedIn</a>{{ end }}
+              {{ with index . "github" }}<span class="sep"> — </span><a class="social-link github" href="{{ . }}" target="_blank" rel="noopener">GitHub</a>{{ end }}
+              {{ with index . "website" }}<span class="sep"> — </span><a class="social-link website" href="{{ . }}" target="_blank" rel="noopener">Website</a>{{ end }}
+              {{ range $k, $v := . }}{{ if and (ne $k "linkedin") (ne $k "github") (ne $k "website") }}<span class="sep"> — </span><a class="social-link other" href="{{ $v }}" target="_blank" rel="noopener">{{ $k }}</a>{{ end }}{{ end }}
+            </span>
+          {{ end }}
+        </div>
       </header>
 
       <div class="visually-hidden">{{ index .Profile "summary" }}</div>
@@ -45,6 +64,7 @@
             {{ range $i, $r := . }}
               <div class="role">
                 <div class="role-head">{{ index $r "company" }} — {{ index $r "title" }}{{ if index $r "period" }} | {{ index $r "period" }}{{ end }}</div>
+                {{ if index $r "summary" }}<p class="role-summary">{{ index $r "summary" }}</p>{{ end }}
                 {{ if index $r "bullets" }}<ul>{{ range $j, $b := index $r "bullets" }}<li>{{ $b }}</li>{{ end }}</ul>{{ end }}
               </div>
             {{ end }}
@@ -89,24 +109,43 @@
           <section class="education">
             <h2>Certifications & Extras</h2>
               {{ with index .Profile "certifications" }}
-                <ul class="certifications">
+                <div class="cert-inline" aria-label="Certifications">
+                  {{ $first := true }}
                   {{ range $i, $c := . }}
-                    <li>
-                      <div class="cert-name"><strong>{{ index $c "name" }}</strong>{{ if index $c "issuer" }} — <em>{{ index $c "issuer" }}</em>{{ end }}{{ if index $c "date" }} ({{ index $c "date" }}){{ end }}</div>
-                      {{ if index $c "url" }}<div class="cert-url"><a href="{{ index $c "url" }}" target="_blank" rel="noopener">{{ index $c "url" }}</a></div>{{ end }}
-                      {{ if index $c "description" }}<div class="cert-desc">{{ index $c "description" }}</div>{{ end }}
-                    </li>
+                    {{ if not $first }}<span class="cert-sep"> · </span>{{ end }}
+                    <span class="cert-token">
+                      <span class="cert-name">{{ index $c "name" }}</span>
+                      {{ if index $c "issuer" }}<span class="cert-meta"> ({{ index $c "issuer" }})</span>{{ end }}
+                      {{ if index $c "date" }}<span class="cert-year"> {{ index $c "date" }}</span>{{ end }}
+                    </span>
+                    {{ $first = false }}
                   {{ end }}
-                </ul>
+                </div>
               {{ end }}
               {{ with index .Profile "extras" }}
-                <ul class="extras">
+                <div class="extras-compact">
                   {{ range $i, $e := . }}
-                    <li><strong>{{ index $e "category" }}:</strong> {{ index $e "text" }}</li>
+                    <span class="extra-token"><strong>{{ index $e "category" }}:</strong> {{ index $e "text" }}</span>
                   {{ end }}
-                </ul>
+                </div>
               {{ end }}
           </section>
+
+          <!-- Certifications appendix with full details for print/verification -->
+          {{ with index .Profile "certifications" }}
+          <section class="cert-appendix">
+            <h3>Certifications — details</h3>
+            <ul>
+              {{ range $i, $c := . }}
+                <li>
+                  <strong>{{ index $c "name" }}</strong>{{ if index $c "issuer" }} — {{ index $c "issuer" }}{{ end }}{{ if index $c "date" }} ({{ index $c "date" }}){{ end }}
+                  {{ if index $c "url" }} — <a href="{{ index $c "url" }}" target="_blank" rel="noopener">{{ if index $c "url_label" }}{{ index $c "url_label" }}{{ else }}link{{ end }}</a>{{ end }}
+                  {{ if index $c "description" }}<div class="cert-desc-block">{{ index $c "description" }}</div>{{ end }}
+                </li>
+              {{ end }}
+            </ul>
+          </section>
+          {{ end }}
         </main>
       </div>
 

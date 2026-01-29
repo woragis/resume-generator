@@ -434,7 +434,7 @@ func (c *Client) FormatProfileSnapshot(ctx context.Context, payload map[string]i
 func (c *Client) FormatPublicationsCertsExtras(ctx context.Context, payload map[string]interface{}) (map[string]interface{}, error) {
 	schemaBytes := []byte{}
 	if b, err := os.ReadFile("templates/schema/publications.schema.json"); err == nil { schemaBytes = b }
-	instr := "Return ONLY a single JSON object with keys 'publications', 'certifications', and 'extras' that conform to the provided schema.\n\nFor publications: return an array of descriptive strings (each >= 40 chars) in the form 'Title — YEAR. One-line summary.' If a publication item is short, expand it into a descriptive summary.\n\nFor certifications: return structured objects with fields {name (required), issuer, date (ISO), url, description (max 140 chars)}.\n\nFor extras: return objects {category, text} where text <= 140 chars.\n\nDo NOT include any other fields, commentary, or non-JSON text."
+	instr := "Return ONLY a single JSON object with keys 'publications', 'certifications', and 'extras' that conform to the provided schema.\n\nFor publications: return an array of descriptive strings (each >= 40 chars) in the form 'Title — YEAR. One-line summary.' If a publication item is short, expand it into a descriptive summary.\n\nFor certifications: return structured objects with fields {name (required), issuer, date (ISO), url, description (max 140 chars)} and optionally include 'url_label' as a short human-friendly label (hostname or brand).\n\nFor extras: return objects {category, text} where text <= 140 chars.\n\nDo NOT include any other fields, commentary, or non-JSON text."
 	if len(schemaBytes) > 0 { instr = instr + "\n\nJSON-SCHEMA:\n" + string(schemaBytes) }
 	userCtx := map[string]interface{}{"payload": payload, "instructions": instr}
 	reqObj := map[string]interface{}{"agent": "auto", "input": "Format publications/certifications/extras:\n" + mustMarshal(userCtx)}
@@ -456,6 +456,9 @@ func (c *Client) FormatPublicationsCertsExtras(ctx context.Context, payload map[
 		if start >= 0 && end > start { sub := s[start:end+1]; if err2 := json.Unmarshal([]byte(sub), &out); err2 == nil { return out, nil } }
 		return nil, fmt.Errorf("ai-service returned non-json content: %w", err)
 	}
+	// Post-process and sanitize certifications to enforce schema rules
+	sanitizeCertifications(out)
+
 	return out, nil
 }
 
@@ -482,6 +485,9 @@ func (c *Client) FormatSummaryMeta(ctx context.Context, payload map[string]inter
 		if start >= 0 && end > start { sub := s[start:end+1]; if err2 := json.Unmarshal([]byte(sub), &out); err2 == nil { return out, nil } }
 		return nil, fmt.Errorf("ai-service returned non-json content: %w", err)
 	}
+	// Ensure meta.contact is an object (coerce simple string emails to {"email": "..."})
+	sanitizeSummaryMeta(out)
+
 	return out, nil
 }
 
@@ -489,4 +495,82 @@ func (c *Client) FormatSummaryMeta(ctx context.Context, payload map[string]inter
 func mustMarshal(v interface{}) string {
 	b, _ := json.Marshal(v)
 	return string(b)
+}
+
+// sanitizeCertifications enforces date formats and description length for
+// the 'certifications' field produced by the AI. It mutates the provided
+// map in-place.
+func sanitizeCertifications(m map[string]interface{}) {
+	if m == nil {
+		return
+	}
+	raw, ok := m["certifications"]
+	if !ok || raw == nil {
+		return
+	}
+	arr, ok := raw.([]interface{})
+	if !ok {
+		return
+	}
+	for i := range arr {
+		item, ok := arr[i].(map[string]interface{})
+		if !ok {
+			continue
+		}
+		// Normalize date
+		if d, ok := item["date"].(string); ok {
+			if len(d) == 7 { // YYYY-MM -> YYYY-MM-01
+				item["date"] = d + "-01"
+			} else if len(d) == 4 { // YYYY -> YYYY-01-01
+				item["date"] = d + "-01-01"
+			}
+		}
+		// Truncate description to 140 chars without cutting words
+		if descRaw, ok := item["description"].(string); ok && len(descRaw) > 140 {
+			truncated := descRaw[:140]
+			// find last space to avoid cutting in middle of word
+			last := -1
+			for idx := len(truncated) - 1; idx >= 0; idx-- {
+				if truncated[idx] == ' ' {
+					last = idx
+					break
+				}
+			}
+			if last > 0 {
+				truncated = truncated[:last]
+			}
+			item["description"] = truncated
+		}
+		// leave url as-is if present
+		arr[i] = item
+	}
+	m["certifications"] = arr
+}
+
+// sanitizeSummaryMeta coerces meta.contact from a simple string into an
+// object {"email": "..."} which downstream schema validation expects.
+func sanitizeSummaryMeta(m map[string]interface{}) {
+	if m == nil {
+		return
+	}
+	metaRaw, ok := m["meta"]
+	if !ok || metaRaw == nil {
+		return
+	}
+	meta, ok := metaRaw.(map[string]interface{})
+	if !ok {
+		return
+	}
+	if contactRaw, ok := meta["contact"]; ok {
+		switch v := contactRaw.(type) {
+		case string:
+			// simple string -> {"email": "..."}
+			meta["contact"] = map[string]interface{}{"email": v}
+		case map[string]interface{}:
+			// already structured; nothing to do
+		default:
+			// leave as-is for unknown types
+		}
+	}
+	m["meta"] = meta
 }

@@ -53,7 +53,41 @@ func AggregateForUser(ctx context.Context, userID string) (AggregateResult, erro
 			res["user"] = v
 		}
 		if v, err := queryJSON(ctx, pool, `SELECT coalesce(json_agg(row_to_json(p)), '[]') FROM profiles p WHERE p.user_id::text=$1`, userID); err == nil {
+			// store raw profiles
 			res["profiles"] = v
+			// normalize profile.social_links if present and stored as string
+			if arr, ok := v.([]interface{}); ok {
+				for i, it := range arr {
+					if pm, ok := it.(map[string]interface{}); ok {
+						if slRaw, has := pm["social_links"]; has {
+							switch s := slRaw.(type) {
+							case string:
+								var parsed map[string]string
+								if err := json.Unmarshal([]byte(s), &parsed); err == nil {
+									out := map[string]interface{}{}
+									for k, vv := range parsed {
+										out[k] = vv
+									}
+									pm["social_links"] = out
+								}
+							case map[string]interface{}:
+								// already an object, keep as-is
+							default:
+								if b, err := json.Marshal(s); err == nil {
+									var parsed map[string]interface{}
+									if err2 := json.Unmarshal(b, &parsed); err2 == nil {
+										pm["social_links"] = parsed
+									}
+								}
+							}
+						}
+						arr[i] = pm
+					} else {
+						arr[i] = it
+					}
+				}
+				res["profiles"] = arr
+			}
 		}
 	}
 
@@ -77,7 +111,8 @@ func AggregateForUser(ctx context.Context, userID string) (AggregateResult, erro
 		if v, err := queryJSON(ctx, pool, `SELECT coalesce(json_agg(row_to_json(c)), '[]') FROM case_studies c WHERE c.author_id::text=$1 OR c.user_id::text=$1`, userID); err == nil {
 			res["case_studies"] = v
 		}
-		if v, err := queryJSON(ctx, pool, `SELECT coalesce(json_agg(row_to_json(pub)), '[]') FROM publications pub WHERE pub.author_id::text=$1 OR pub.user_id::text=$1`, userID); err == nil {
+		// publications table uses `user_id`; some schemas do not have `author_id`.
+		if v, err := queryJSON(ctx, pool, `SELECT coalesce(json_agg(row_to_json(pub)), '[]') FROM publications pub WHERE pub.user_id::text=$1`, userID); err == nil {
 			res["publications"] = v
 		}
 		if v, err := queryJSON(ctx, pool, `SELECT coalesce(json_agg(row_to_json(m)), '[]') FROM impact_metrics m WHERE m.user_id::text=$1`, userID); err == nil {
@@ -96,6 +131,10 @@ func AggregateForUser(ctx context.Context, userID string) (AggregateResult, erro
 		}
 		if v, err := queryJSON(ctx, pool, `SELECT coalesce(json_agg(row_to_json(pt)), '[]') FROM project_technologies pt WHERE pt.user_id::text=$1 OR pt.project_owner_id::text=$1`, userID); err == nil {
 			res["project_technologies"] = v
+		}
+		// Attempt to fetch certifications from the management DB (optional)
+		if v, err := queryJSON(ctx, pool, `SELECT coalesce(json_agg(row_to_json(c)), '[]') FROM certifications c WHERE c.user_id::text=$1`, userID); err == nil {
+			res["certifications"] = v
 		}
 	}
 

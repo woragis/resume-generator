@@ -15,6 +15,10 @@
             "github": { "type": "string" },
             "location": { "type": "string" }
           }
+        },
+        "social_links": {
+          "type": "object",
+          "additionalProperties": { "type": "string", "format": "uri" }
         }
       },
       "required": ["name", "headline"]
@@ -47,6 +51,7 @@
           "company": { "type": "string" },
           "title": { "type": "string" },
           "period": { "type": "string" },
+          "summary": { "type": "string", "minLength": 40, "maxLength": 240 },
           "bullets": {
             "type": "array",
             "items": { "type": "string", "minLength": 40, "maxLength": 140 }

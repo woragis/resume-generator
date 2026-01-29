@@ -40,7 +40,6 @@
       },
       "required": ["tech", "achievements", "selected_projects"]
     }
-  }
-  ,
+  },
   "required": ["meta", "summary", "snapshot"]
 }

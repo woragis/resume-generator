@@ -7,6 +7,7 @@ import (
 	"html/template"
 	"io/ioutil"
 	"os"
+	"net/url"
 	"path/filepath"
 	"strings"
 	"time"
@@ -17,6 +18,7 @@ import (
 	ai "resume-generator/pkg/ai"
 
 	"github.com/google/uuid"
+	"golang.org/x/net/publicsuffix"
 )
 
 type Renderer interface {
@@ -728,8 +730,77 @@ func (p *Processor) Process(ctx context.Context, job *domain.ResumeJob) error {
 			}
 		}
 
+		// Compact certification dates to year-only for compact display
+		if certsRaw, ok := resumeMap["certifications"]; ok {
+			if certsArr, ok := certsRaw.([]interface{}); ok {
+				for i, it := range certsArr {
+					switch c := it.(type) {
+					case map[string]interface{}:
+						if d, ok := c["date"].(string); ok && len(d) >= 4 {
+							// prefer first 4 characters as year when possible
+							c["date"] = d[:4]
+						}
+						certsArr[i] = c
+					default:
+						// leave as-is
+					}
+				}
+				resumeMap["certifications"] = certsArr
+			}
+		}
+
 		// replace job.Profile with validated and merged resumeMap for template rendering
 		job.Profile = resumeMap
+
+		// compute short URL label for certifications (used by template to show domain-only)
+		if certsRaw, ok := resumeMap["certifications"]; ok {
+			if certsArr, ok := certsRaw.([]interface{}); ok {
+				for i, it := range certsArr {
+					switch c := it.(type) {
+					case map[string]interface{}:
+						label := ""
+						if uRaw, ok := c["url"]; ok {
+							if us, ok := uRaw.(string); ok && us != "" {
+								// ensure scheme present for parsing
+								candidate := us
+								if !strings.HasPrefix(candidate, "http://") && !strings.HasPrefix(candidate, "https://") {
+									candidate = "https://" + candidate
+								}
+								if parsed, err := url.Parse(candidate); err == nil {
+									host := parsed.Hostname()
+									// attempt eTLD+1 extraction for tidy labels
+									if etld, err2 := publicsuffix.EffectiveTLDPlusOne(host); err2 == nil {
+										label = strings.TrimPrefix(etld, "www.")
+									} else {
+										// fallback to hostname without port and www
+										if host == "" {
+											label = candidate
+										} else {
+											label = strings.TrimPrefix(host, "www.")
+										}
+									}
+								} else {
+									label = us
+								}
+							}
+						}
+						if label == "" {
+							// prefer issuer if present for human-friendly label
+							if iss, ok := c["issuer"].(string); ok && iss != "" {
+								label = iss
+							} else {
+								label = "link"
+							}
+						}
+						c["url_label"] = label
+						certsArr[i] = c
+					default:
+						// leave non-object entries as-is
+					}
+				}
+				resumeMap["certifications"] = certsArr
+			}
+		}
 
 		// All per-experience summaries must be produced by the AI.
 		// The processor no longer synthesizes role summaries locally; if the

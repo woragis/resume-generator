@@ -67,6 +67,25 @@ body {
   margin-top: 0.4rem;
 }
 
+.social-links {
+  display: inline-flex;
+  gap: 0.4rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.social-links .sep {
+  color: var(--muted);
+}
+.social-link {
+  color: var(--accent-700);
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+.social-link::before {
+  display: none; /* disable pseudo-icons for better PDF rendering */
+}
+
 .layout {
   display: block; /* single-column flow now that there's no sidebar */
   gap: var(--space-lg);
@@ -179,6 +198,10 @@ li {
     font-size: var(--fs-xs);
     color: var(--muted);
   }
+  /* Do not append full URLs for certification appendix links (we render short labels) */
+  .cert-appendix a::after {
+    content: none !important;
+  }
   /* Improve text wrapping */
   h2,
   h3 {
@@ -204,34 +227,176 @@ a {
   word-break: break-word;
 }
 
-/* Certifications + Extras styling */
 .certifications {
   list-style: none;
   padding: 0;
-  margin: 0.25rem 0 0 0;
+  margin: 0.125rem 0 0 0;
   display: grid;
-  grid-template-columns: 1fr;
-  gap: 0.5rem;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.4rem;
 }
 .certifications li {
-  padding: 0.5rem;
+  padding: 0.35rem 0.45rem;
   border-radius: 6px;
   background: rgba(46, 91, 115, 0.03);
   border: 1px solid rgba(46, 91, 115, 0.06);
+  position: relative;
+  overflow: visible;
+  font-size: 0.92rem;
+  line-height: 1.15;
+}
+.cert-line {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+/* Hide link icon and info toggle in compact main view (force hide across variants) */
+.cert-link {
+  display: none !important;
+}
+.cert-toggle {
+  display: none !important;
 }
 .cert-name {
   font-size: 0.95rem;
   color: var(--muted-dark);
+  font-weight: 600;
 }
-.cert-desc {
-  font-size: var(--fs-sm);
+.cert-meta {
+  font-size: 0.82rem;
   color: var(--muted);
-  margin-top: 0.25rem;
+}
+.cert-link {
+  margin-left: auto;
+  font-size: 0.95rem;
+  color: var(--accent-300);
+  text-decoration: none;
+}
+.cert-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 50%;
+  background: rgba(46, 91, 115, 0.06);
+  border: none;
+  color: var(--accent-700);
+  font-size: 0.8rem;
+  cursor: default;
+  margin-left: 0.25rem;
+}
+/* description collapsed by default; shown on hover (screen) */
+.cert-desc {
+  display: none;
+  position: absolute;
+  left: 0;
+  top: calc(100% + 0.25rem);
+  width: calc(100% - 0.5rem);
+  background: white;
+  border: 1px solid rgba(46, 91, 115, 0.08);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06);
+  padding: 0.5rem;
+  border-radius: 6px;
+  font-size: 0.82rem;
+  color: var(--muted);
+  z-index: 30;
+}
+.certifications li:hover .cert-desc,
+.certifications li:focus-within .cert-desc {
+  display: block;
 }
 .cert-url a {
   font-size: 0.8rem;
   color: var(--accent-300);
   text-decoration: none;
+}
+
+/* Inline compact tokens for certifications */
+.cert-inline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  align-items: center;
+  font-size: 0.85rem;
+  color: var(--muted-dark);
+  margin-top: 0.25rem;
+}
+.cert-token {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 38%;
+}
+.cert-sep {
+  color: var(--muted);
+  margin: 0 0.25rem;
+}
+.cert-meta {
+  font-style: normal;
+  color: var(--muted);
+  font-size: 0.8rem;
+  margin-left: 0.25rem;
+}
+.cert-year {
+  color: var(--muted);
+  font-size: 0.85rem;
+  margin-left: 0.15rem;
+}
+.extras-compact {
+  font-size: 0.85rem;
+  color: var(--muted-dark);
+  margin-top: 0.25rem;
+}
+.extra-token {
+  margin-right: 0.4rem;
+}
+
+/* Hide link icon in compact main view to save space */
+.cert-link {
+  display: none;
+}
+
+/* Appendix: full cert details (printed/verification) */
+.cert-appendix {
+  margin-top: 0.5rem;
+  font-size: 0.85rem;
+  color: var(--muted-dark);
+}
+.cert-appendix ul {
+  margin: 0.25rem 0 0 1rem;
+}
+.cert-appendix li {
+  margin: 0.35rem 0;
+}
+.cert-desc-block {
+  margin-top: 0.25rem;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+@media screen {
+  /* hide appendix on small screens to save space */
+  .cert-appendix {
+    display: none;
+  }
+}
+
+@media print {
+  /* show appendix in print/PDF and hide compact inline tokens */
+  .cert-inline,
+  .extras-compact {
+    display: none;
+  }
+  .cert-appendix {
+    display: block;
+    font-size: var(--fs-sm);
+  }
+  /* Hide any inline cert URL anchors on screen while keeping them in the appendix/print */
+  .cert-url a {
+    display: none !important;
+  }
 }
 .extras {
   list-style: none;
@@ -258,8 +423,33 @@ a {
   margin-right: 0.5rem;
 }
 
-@media (min-width: 900px) {
+/* For narrower print layouts we keep two columns where possible; media query kept for larger screens */
+@media (min-width: 680px) {
   .certifications {
     grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media print {
+  /* Show descriptions in printed/PDF output as compact inline text */
+  .cert-desc {
+    display: block !important;
+    position: static;
+    width: auto;
+    box-shadow: none;
+    border: none;
+    padding: 0;
+    margin-top: 0.15rem;
+    font-size: var(--fs-xs);
+    color: var(--muted);
+  }
+  .cert-toggle {
+    display: none;
+  }
+  .certifications {
+    gap: 0.25rem;
+  }
+  .certifications li {
+    padding: 0.25rem 0.35rem;
   }
 }

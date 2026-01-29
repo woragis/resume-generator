@@ -6,6 +6,37 @@ import (
 	"time"
 )
 
+// Section-specific typed outputs for AI responses. These are intentionally
+// minimal and used to help validation/merging logic in the processor.
+
+type ExperienceItem struct {
+    Company string   `json:"company"`
+    Title   string   `json:"title"`
+    Period  string   `json:"period,omitempty"`
+    Bullets []string `json:"bullets,omitempty"`
+}
+
+type ProjectItem struct {
+    ID          string   `json:"id"`
+    Title       string   `json:"title"`
+    URL         string   `json:"url,omitempty"`
+    Stack       string   `json:"stack,omitempty"`
+    Description string   `json:"description"`
+    Bullets     []string `json:"bullets,omitempty"`
+}
+
+type ProfileSnapshot struct {
+    Meta    map[string]interface{} `json:"meta,omitempty"`
+    Summary string                 `json:"summary,omitempty"`
+    Snapshot map[string]interface{} `json:"snapshot,omitempty"`
+}
+
+type PublicationsCertsExtras struct {
+    Publications   []string               `json:"publications,omitempty"`
+    Certifications []map[string]string    `json:"certifications,omitempty"`
+    Extras         []map[string]string    `json:"extras,omitempty"`
+}
+
 // Overrides represents user-supplied profile overrides that are focused
 // on a few fields used during AI enrichment.
 type Overrides struct {

@@ -1,0 +1,18 @@
+{
+  "userId": "9136d765-327d-4cf3-bf1c-98aa1449e52d",
+  "profile": {
+    "meta": {
+      "name": "Jezreel de Andrade",
+      "headline": "Backend Engineer — Go, Distributed Systems",
+      "contact": {"email": "jezreel.veloso@gmail.com"},
+      "social_links": {"linkedin":"https://linkedin.com/in/jezreel-andrade","github":"https://github.com/woragis","website":"https://www.woragis.me"}
+    },
+    "summary": "Experienced backend engineer specialized in Go microservices and data processing. Proven track record optimizing systems and mentoring teams.",
+    "snapshot": {"tech":"Go,Postgres,GKE","achievements":["Reduced batch runtime by 600 minutes","Led backend team to improve throughput","Mentored junior engineers"],"selected_projects":["Project A — Improved pipeline","Project B — Scaled API"]},
+    "experience": [{"company":"Nimbly Labs","title":"Senior Software Engineer","period":"2016–2019","summary":"Built scalable data processing systems and improved DB schemas.","bullets":["Designed schemas","Improved reliability"]}],
+    "projects": [{"id":"p1","title":"Data Pipeline","url":"https://example.com","stack":"Go,Postgres","description":"Built ETL pipeline to process data at scale.","bullets":["Optimized transforms","Reduced latency"]}],
+    "publications": ["Innovations in Tech — 2021. A comprehensive analysis..."],
+    "certifications": [],
+    "extras": []
+  }
+}

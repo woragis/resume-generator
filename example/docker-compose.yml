@@ -265,7 +265,7 @@ services:
 
   # Management Backend
   management-backend:
-    image: woragis/woragis-management-backend:latest
+    image: woragis/woragis-management-backend:v2.0.0
     container_name: management-backend
     environment:
       ENV: 'production'

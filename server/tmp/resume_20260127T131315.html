@@ -1,0 +1,397 @@
+<!doctype html>
+<html lang="en" class="theme-cool">
+  <head><style>:root {
+  --accent: #2e5b73;
+  --text: #111;
+  --muted: #555;
+  --page-width: 760px;
+  /* Typography tokens */
+  --fs-lg: 1.5rem; /* name */
+  --fs-md: 1rem; /* h2, body base */
+  --fs-sm: 0.875rem; /* small text */
+  --fs-xs: 0.75rem; /* foot */
+  --space-sm: 0.5rem;
+  --space-md: 0.75rem;
+  --space-lg: 1.25rem;
+  /* Accent variants and background tokens (default: Cool palette) */
+  --accent-700: #1f4b5b;
+  --accent-300: #6aa0ad;
+  --muted-dark: #333;
+  --bg-muted: #f4f7f8;
+}
+
+/* Theme classes: add .theme-warm to the document root to switch palettes */
+.theme-cool {
+  --accent: #2e5b73;
+  --accent-700: #1f4b5b;
+  --accent-300: #6aa0ad;
+  --muted: #4a4a4a;
+  --muted-dark: #333;
+  --bg-muted: #f4f7f8;
+}
+.theme-warm {
+  --accent: #b85c2e;
+  --accent-700: #8a3f26;
+  --accent-300: #d99876;
+  --muted: #4a4a4a;
+  --muted-dark: #333;
+  --bg-muted: #fff6f1;
+}
+* {
+  box-sizing: border-box;
+}
+.body,
+body {
+  font-family: Inter, 'Segoe UI', Arial, Helvetica, sans-serif;
+  color: var(--text);
+  line-height: 1.3;
+  margin: 1rem;
+  font-size: var(--fs-md);
+  -webkit-print-color-adjust: exact;
+}
+.page {
+  max-width: var(--page-width);
+  margin: 0 auto 1rem auto;
+  padding: 1rem;
+}
+.header {
+  border-bottom: 1px solid rgba(46, 91, 115, 0.1);
+  padding-bottom: var(--space-sm);
+  margin-bottom: var(--space-md);
+}
+.name {
+  font-size: var(--fs-lg);
+  font-weight: 700;
+}
+.meta {
+  font-size: var(--fs-sm);
+  color: var(--muted);
+  margin-top: 0.4rem;
+}
+
+.layout {
+  display: block; /* single-column flow now that there's no sidebar */
+  gap: var(--space-lg);
+}
+
+.visually-hidden {
+  position: absolute !important;
+  left: -10000px !important;
+  top: auto !important;
+  width: 1px !important;
+  height: 1px !important;
+  overflow: hidden !important;
+}
+
+h2 {
+  color: var(--accent);
+  font-size: var(--fs-md);
+  margin: var(--space-md) 0 0.35rem 0;
+}
+h3 {
+  font-size: var(--fs-sm);
+  margin: var(--space-sm) 0;
+  color: var(--accent);
+}
+
+.main .role {
+  margin-bottom: var(--space-md);
+  page-break-inside: avoid;
+}
+.role-head {
+  font-weight: 600;
+  font-size: var(--fs-sm);
+}
+ul {
+  margin: 0.25rem 0 0 1.125rem;
+  padding: 0;
+}
+li {
+  margin: 0.4rem 0;
+  font-size: var(--fs-sm);
+}
+
+.chips {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  font-size: var(--fs-sm);
+  color: var(--muted);
+}
+.chips span {
+  display: inline-block;
+  padding: 0.4rem 0.5rem;
+  border-radius: 6px;
+  border: 1px solid rgba(46, 91, 115, 0.08);
+  background: transparent;
+  color: var(--muted);
+}
+
+.proj-title {
+  font-weight: 600;
+  font-size: var(--fs-sm);
+}
+.proj-desc {
+  font-size: var(--fs-sm);
+  color: var(--muted);
+  margin-bottom: 0.5rem;
+}
+
+.contact,
+.skills,
+.certs,
+.oss,
+.extras {
+  margin-bottom: var(--space-md);
+  font-size: var(--fs-sm);
+}
+.foot {
+  margin-top: 1rem;
+  font-size: var(--fs-xs);
+  color: var(--muted);
+  text-align: center;
+}
+
+@media print {
+  body {
+    margin: 0;
+    color-adjust: exact;
+  }
+  .page {
+    padding: 12mm;
+    page-break-after: always;
+  }
+  .page:last-child {
+    page-break-after: auto;
+  }
+  /* Avoid splitting roles/projects across pages */
+  .project,
+  .role {
+    page-break-inside: avoid;
+    widows: 2;
+    orphans: 2;
+  }
+  /* Remove decorative borders for print */
+  .chips span {
+    border: none;
+  }
+  /* Show link URLs in print */
+  a::after {
+    content: ' (' attr(href) ')';
+    font-size: var(--fs-xs);
+    color: var(--muted);
+  }
+  /* Improve text wrapping */
+  h2,
+  h3 {
+    color: black;
+  }
+}
+h2 {
+  color: var(--accent-700);
+  font-size: var(--fs-md);
+  margin: var(--space-md) 0 0.35rem 0;
+}
+
+/* Small accessibility & wrapping improvements */
+a {
+  color: var(--accent);
+  word-break: break-word;
+}
+* {
+  hyphens: auto;
+}
+a {
+  color: var(--accent-700);
+  word-break: break-word;
+}
+
+/* Certifications + Extras styling */
+.certifications {
+  list-style: none;
+  padding: 0;
+  margin: 0.25rem 0 0 0;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.5rem;
+}
+.certifications li {
+  padding: 0.5rem;
+  border-radius: 6px;
+  background: rgba(46, 91, 115, 0.03);
+  border: 1px solid rgba(46, 91, 115, 0.06);
+}
+.cert-name {
+  font-size: 0.95rem;
+  color: var(--muted-dark);
+}
+.cert-desc {
+  font-size: var(--fs-sm);
+  color: var(--muted);
+  margin-top: 0.25rem;
+}
+.cert-url a {
+  font-size: 0.8rem;
+  color: var(--accent-300);
+  text-decoration: none;
+}
+.extras {
+  list-style: none;
+  padding: 0;
+  margin: 0.5rem 0 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+.extras li {
+  font-size: var(--fs-sm);
+  color: var(--muted-dark);
+}
+
+/* Compact badges for category labels */
+.extras li strong {
+  display: inline-block;
+  background: var(--accent-300);
+  color: white;
+  padding: 0.08rem 0.45rem;
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: 0.72rem;
+  margin-right: 0.5rem;
+}
+
+@media (min-width: 900px) {
+  .certifications {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+</style>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Jezreel de Andrade Galvao Veloso — Resume</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div class="page">
+      <header class="header">
+        <div class="name">Jezreel de Andrade Galvao Veloso</div>
+        <div class="meta">Senior Backend Engineer — jezreel.veloso@gmail.com</div>
+      </header>
+
+      <div class="visually-hidden">Experienced backend engineer with over 6 years in building scalable Go services and optimizing data pipelines. Proven track record in enhancing system performance.</div>
+
+      <div class="layout">
+        <main class="main">
+          <section class="summary">
+            <h2>Professional Summary</h2>
+            <p>Experienced backend engineer with over 6 years in building scalable Go services and optimizing data pipelines. Proven track record in enhancing system performance.</p>
+          </section>
+
+          
+          <section class="snapshot">
+            <h3>Tech Snapshot</h3>
+            <div>Go, Kubernetes, Postgres, Docker, Microservices</div>
+
+            <h3>Top Achievements</h3>
+            <ul class="achievements">
+              <li>Reduced batch processing time by 600 minutes through optimization of data pipelines and microservices.</li><li>Led a team to successfully deploy scalable microservices on GKE, improving system reliability.</li><li>Mentored junior engineers, fostering a culture of continuous learning and improvement.</li>
+            </ul>
+
+            <h3>Selected Projects</h3>
+            <ul class="selected-projects">
+              <li>Project Alpha: Developed a microservice for real-time data processing.</li><li>Project Beta: Optimized existing APIs, enhancing performance and reliability.</li>
+            </ul>
+          </section>
+          
+
+          
+          <section class="experience">
+            <h2>Experience</h2>
+            
+              <div class="role">
+                <div class="role-head">Acme Tech — Senior Backend Engineer | 2021–Present</div>
+                <ul><li>Built Go microservices, optimized database queries, and deployed on GKE.</li><li>Improved system throughput and reduced latency through effective coding practices.</li></ul>
+              </div>
+            
+              <div class="role">
+                <div class="role-head">Acme Data — Lead Backend Engineer | Jun 2019 — Dec 2021</div>
+                <ul><li>Led backend team in building Go microservices, enhancing throughput and reliability.</li><li>Owned APIs and data pipelines, ensuring high performance and scalability.</li></ul>
+              </div>
+            
+              <div class="role">
+                <div class="role-head">Nimbly Labs — Senior Software Engineer | Jan 2016 — May 2019</div>
+                <ul><li>Developed scalable data processing systems and improved database schemas.</li><li>Mentored junior engineers, contributing to team skill enhancement.</li></ul>
+              </div>
+            
+          </section>
+          
+
+        </main>
+      </div>
+
+      <footer class="foot">References available on request</footer>
+    </div>
+
+    
+    <div class="page">
+      <header class="header">
+        <div class="name">Jezreel de Andrade Galvao Veloso</div>
+        <div class="meta">Page 2 — Projects & Publications</div>
+      </header>
+
+      <div class="layout">
+        <main class="main">
+          <section class="projects">
+            <h2>Projects — Case Studies</h2>
+            
+              
+                <div class="project" id="project-0">
+                  <div class="proj-title">Real-time Data Processing System — <a href="https://acme.example/projects/real-time-data" target="_blank" rel="noopener">link</a></div>
+                  <div class="proj-desc">Developed a real-time data processing system that significantly improved data handling efficiency and reduced latency.</div>
+                  <ul><li>Implemented microservices architecture for better scalability.</li><li>Achieved a 50% reduction in data processing time.</li></ul>
+                </div>
+              
+                <div class="project" id="project-1">
+                  <div class="proj-title">API Optimization Project — <a href="https://acme.example/projects/api-optimization" target="_blank" rel="noopener">link</a></div>
+                  <div class="proj-desc">Optimized existing APIs to enhance performance and reliability, resulting in improved user experience and reduced server load.</div>
+                  <ul><li>Refactored code to improve response times.</li><li>Conducted load testing to ensure stability under high traffic.</li></ul>
+                </div>
+              
+            
+          </section>
+
+          <section class="publications">
+            <h2>Publications</h2>
+            <ul>
+              <li>Building Scalable Microservices — 2023. A comprehensive guide on developing and deploying microservices.</li>
+            </ul>
+          </section>
+
+          <section class="education">
+            <h2>Certifications & Extras</h2>
+              
+                <ul class="certifications">
+                  
+                    <li>
+                      <div class="cert-name"><strong>Certified Kubernetes Administrator</strong> — <em>Cloud Native Computing Foundation</em> (2023-05-01)</div>
+                      <div class="cert-url"><a href="https://www.cncf.io/certification/kubernetes-administrator/" target="_blank" rel="noopener">https://www.cncf.io/certification/kubernetes-administrator/</a></div>
+                      <div class="cert-desc">Certification demonstrating proficiency in Kubernetes administration.</div>
+                    </li>
+                  
+                </ul>
+              
+              
+                <ul class="extras">
+                  
+                    <li><strong>Open Source:</strong> Contributor to various Go open-source projects, enhancing community tools.</li>
+                  
+                </ul>
+              
+          </section>
+        </main>
+      </div>
+
+      <footer class="foot">References available on request</footer>
+    </div>
+  </body>
+</html>
