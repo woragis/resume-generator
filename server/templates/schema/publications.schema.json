@@ -16,8 +16,7 @@
           "issuer": { "type": "string" },
           "date": { "type": "string", "format": "date" },
           "url": { "type": "string", "format": "uri" },
-          "description": { "type": "string", "maxLength": 140 }
-          ,
+          "description": { "type": "string", "maxLength": 140 },
           "url_label": { "type": "string" }
         },
         "required": ["name"]

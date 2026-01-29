@@ -29,8 +29,8 @@ func (r *ChromedpRenderer) RenderHTMLToPDF(ctx context.Context, html string) ([]
 		chromedp.Flag("disable-setuid-sandbox", true),
 		chromedp.Flag("disable-gpu", true),
 		chromedp.Flag("disable-dev-shm-usage", true),
-		chromedp.Flag("remote-debugging-port", 9222),
-		chromedp.Flag("single-process", false),
+		// Avoid forcing a fixed remote-debugging port or single-process mode;
+		// let the allocator pick a free debugging port and default process model.
 		chromedp.Flag("disable-extensions", true),
 		chromedp.UserDataDir(tmpDir),
 	)

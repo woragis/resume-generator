@@ -101,47 +101,54 @@
 
           <section class="publications">
             <h2>Publications</h2>
-            <ul>
-              {{ range $i, $pub := index .Profile "publications" }}<li>{{ $pub }}</li>{{ end }}
+            <ul class="pub-list">
+              {{ range $i, $pub := index .Profile "publications" }}<li class="pub-item">{{ $pub }}</li>{{ end }}
             </ul>
           </section>
 
           <section class="education">
-            <h2>Certifications & Extras</h2>
-              {{ with index .Profile "certifications" }}
-                <div class="cert-inline" aria-label="Certifications">
-                  {{ $first := true }}
-                  {{ range $i, $c := . }}
-                    {{ if not $first }}<span class="cert-sep"> · </span>{{ end }}
-                    <span class="cert-token">
-                      <span class="cert-name">{{ index $c "name" }}</span>
-                      {{ if index $c "issuer" }}<span class="cert-meta"> ({{ index $c "issuer" }})</span>{{ end }}
-                      {{ if index $c "date" }}<span class="cert-year"> {{ index $c "date" }}</span>{{ end }}
-                    </span>
-                    {{ $first = false }}
-                  {{ end }}
-                </div>
-              {{ end }}
-              {{ with index .Profile "extras" }}
-                <div class="extras-compact">
+            <h2>Continuous Learning & Community</h2>
+            
+            {{ with index .Profile "extras" }}
+              <div class="extras-section">
+                <div class="extras-grid">
                   {{ range $i, $e := . }}
-                    <span class="extra-token"><strong>{{ index $e "category" }}:</strong> {{ index $e "text" }}</span>
+                    <span class="extra-token" data-category="{{ index $e "category" }}"><strong>{{ index $e "category" }}:</strong> {{ index $e "text" }}</span>
                   {{ end }}
                 </div>
-              {{ end }}
+              </div>
+            {{ end }}
+
+            {{ with index .Profile "certifications" }}
+              <h3 class="certs-subheading">Certifications</h3>
+              <div class="cert-inline" aria-label="Certifications">
+                {{ $first := true }}
+                {{ range $i, $c := . }}
+                  {{ if not $first }}<span class="cert-sep"> · </span>{{ end }}
+                  <span class="cert-token">
+                    <span class="cert-name">{{ index $c "name" }}</span>
+                    {{ if index $c "issuer" }}<span class="cert-meta"> ({{ index $c "issuer" }})</span>{{ end }}
+                    {{ if index $c "date" }}<span class="cert-year"> {{ index $c "date" }}</span>{{ end }}
+                  </span>
+                  {{ $first = false }}
+                {{ end }}
+              </div>
+            {{ end }}
           </section>
 
-          <!-- Certifications appendix with full details for print/verification -->
+          <!-- Certifications appendix with full details for print/verification (show top 4 on print) -->
           {{ with index .Profile "certifications" }}
           <section class="cert-appendix">
             <h3>Certifications — details</h3>
             <ul>
               {{ range $i, $c := . }}
+                {{ if lt $i 4 }}
                 <li>
                   <strong>{{ index $c "name" }}</strong>{{ if index $c "issuer" }} — {{ index $c "issuer" }}{{ end }}{{ if index $c "date" }} ({{ index $c "date" }}){{ end }}
                   {{ if index $c "url" }} — <a href="{{ index $c "url" }}" target="_blank" rel="noopener">{{ if index $c "url_label" }}{{ index $c "url_label" }}{{ else }}link{{ end }}</a>{{ end }}
                   {{ if index $c "description" }}<div class="cert-desc-block">{{ index $c "description" }}</div>{{ end }}
                 </li>
+                {{ end }}
               {{ end }}
             </ul>
           </section>
