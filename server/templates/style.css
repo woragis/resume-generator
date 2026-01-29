@@ -385,8 +385,7 @@ a {
 
 @media print {
   /* show appendix in print/PDF and hide compact inline tokens */
-  .cert-inline,
-  .extras-compact {
+  .cert-inline {
     display: none;
   }
   .cert-appendix {

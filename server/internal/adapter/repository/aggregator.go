@@ -136,6 +136,11 @@ func AggregateForUser(ctx context.Context, userID string) (AggregateResult, erro
 		if v, err := queryJSON(ctx, pool, `SELECT coalesce(json_agg(row_to_json(c)), '[]') FROM certifications c WHERE c.user_id::text=$1`, userID); err == nil {
 			res["certifications"] = v
 		}
+
+		// Attempt to fetch extras from the management DB (optional)
+		if v, err := queryJSON(ctx, pool, `SELECT coalesce(json_agg(row_to_json(e)), '[]') FROM extras e WHERE e.user_id::text=$1`, userID); err == nil {
+			res["extras"] = v
+		}
 	}
 
 	return res, nil
