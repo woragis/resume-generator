@@ -214,6 +214,7 @@ services:
       AI_SERVICE_URL: ${AI_SERVICE_URL}
       OPENAI_API_KEY: ${OPENAI_API_KEY}
       OPENAI_MODEL: ${OPENAI_MODEL}
+      DEFAULT_LANGUAGE: portuguese
     volumes:
       - ./resume-data:/app/resume-data
       - ./templates:/app/templates:ro

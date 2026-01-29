@@ -13,10 +13,11 @@ import (
 type ExperienceFormatter struct {
 	client *http.Client
 	baseURL string
+	language string
 }
 
-func NewExperienceFormatter(httpClient *http.Client, baseURL string) *ExperienceFormatter {
-	return &ExperienceFormatter{client: httpClient, baseURL: baseURL}
+func NewExperienceFormatter(httpClient *http.Client, baseURL string, language string) *ExperienceFormatter {
+	return &ExperienceFormatter{client: httpClient, baseURL: baseURL, language: language}
 }
 
 func (ef *ExperienceFormatter) Format(ctx context.Context, payload map[string]interface{}) (map[string]interface{}, error) {
@@ -26,7 +27,7 @@ func (ef *ExperienceFormatter) Format(ctx context.Context, payload map[string]in
 		schemaBytes = b
 	}
 	
-	instr := "Return ONLY a single JSON object with keys 'experience' and 'projects' that conform to the provided schema. For each experience entry include an optional 'summary' field: a concise 40-240 character paragraph describing the role and impact. Do NOT include any extra text.\n\nJSON-SCHEMA:\n" + string(schemaBytes)
+	instr := fmt.Sprintf("Format the output in %s. Return ONLY a single JSON object with keys 'experience' and 'projects' that conform to the provided schema. For each experience entry include an optional 'summary' field: a concise 40-240 character paragraph describing the role and impact. Do NOT include any extra text.\n\nJSON-SCHEMA:\n", ef.language) + string(schemaBytes)
 	
 	userCtx := map[string]interface{}{"payload": payload, "instructions": instr}
 	reqObj := map[string]interface{}{"agent": "auto", "input": "Format experience and projects:\n" + mustMarshal(userCtx)}

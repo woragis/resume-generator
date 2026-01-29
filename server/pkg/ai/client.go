@@ -17,8 +17,9 @@ import (
 // Client calls the internal ai-service to format raw profile data into the
 // canonical resume schema.
 type Client struct {
-	BaseURL string
-	HTTP    *http.Client
+	BaseURL         string
+	HTTP            *http.Client
+	DefaultLanguage string
 }
 
 func NewClient() *Client {
@@ -29,6 +30,14 @@ func NewClient() *Client {
 	return &Client{BaseURL: base, HTTP: &http.Client{Timeout: 60 * time.Second}}
 }
 
+func NewClientWithLanguage(language string) *Client {
+	base := os.Getenv("AI_SERVICE_URL")
+	if base == "" {
+		base = "http://ai-service:8000"
+	}
+	return &Client{BaseURL: base, HTTP: &http.Client{Timeout: 60 * time.Second}, DefaultLanguage: language}
+}
+
 // Formatter interface for the four specialized formatters
 type Formatter interface {
 	Format(ctx context.Context, payload map[string]interface{}) (map[string]interface{}, error)
@@ -36,19 +45,19 @@ type Formatter interface {
 
 // Factory methods to create formatters
 func (c *Client) NewExperienceFormatter() Formatter {
-	return formatters.NewExperienceFormatter(c.HTTP, c.BaseURL)
+	return formatters.NewExperienceFormatter(c.HTTP, c.BaseURL, c.DefaultLanguage)
 }
 
 func (c *Client) NewProfileFormatter() Formatter {
-	return formatters.NewProfileFormatter(c.HTTP, c.BaseURL)
+	return formatters.NewProfileFormatter(c.HTTP, c.BaseURL, c.DefaultLanguage)
 }
 
 func (c *Client) NewPublicationsFormatter() Formatter {
-	return formatters.NewPublicationsFormatter(c.HTTP, c.BaseURL)
+	return formatters.NewPublicationsFormatter(c.HTTP, c.BaseURL, c.DefaultLanguage)
 }
 
 func (c *Client) NewSummaryFormatter() Formatter {
-	return formatters.NewSummaryFormatter(c.HTTP, c.BaseURL)
+	return formatters.NewSummaryFormatter(c.HTTP, c.BaseURL, c.DefaultLanguage)
 }
 
 // doPostWithRetry performs an HTTP POST to the given path with retry/backoff.

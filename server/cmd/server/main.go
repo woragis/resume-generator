@@ -17,6 +17,12 @@ import (
 func main() {
 	ctx := context.Background()
 
+	// Load and validate required env vars
+	defaultLanguage := os.Getenv("DEFAULT_LANGUAGE")
+	if defaultLanguage == "" {
+		log.Fatalf("ERROR: DEFAULT_LANGUAGE env var is required")
+	}
+
 	// infra setup
 	jobsPool, err := infra.NewJobsPool(ctx)
 	if err != nil {
@@ -26,11 +32,11 @@ func main() {
 	renderer := infra.NewChromedpRenderer()
 
 	jobsRepo := repo.NewJobsRepo(jobsPool)
-	processor := usecase.NewProcessor(renderer, jobsRepo, "templates")
+	processor := usecase.NewProcessor(renderer, jobsRepo, "templates", defaultLanguage)
 
 	app := fiber.New()
 
-	h := httpadapter.NewHandler(processor, jobsRepo)
+	h := httpadapter.NewHandler(processor, jobsRepo, defaultLanguage)
 	app.Post("/jobs/start", h.StartJob)
 
 	port := os.Getenv("PORT")

@@ -13,10 +13,11 @@ import (
 type PublicationsFormatter struct {
 	client  *http.Client
 	baseURL string
+	language string
 }
 
-func NewPublicationsFormatter(httpClient *http.Client, baseURL string) *PublicationsFormatter {
-	return &PublicationsFormatter{client: httpClient, baseURL: baseURL}
+func NewPublicationsFormatter(httpClient *http.Client, baseURL string, language string) *PublicationsFormatter {
+	return &PublicationsFormatter{client: httpClient, baseURL: baseURL, language: language}
 }
 
 func (pf *PublicationsFormatter) Format(ctx context.Context, payload map[string]interface{}) (map[string]interface{}, error) {
@@ -26,7 +27,7 @@ func (pf *PublicationsFormatter) Format(ctx context.Context, payload map[string]
 		schemaBytes = b
 	}
 	
-	instr := "Return ONLY a single JSON object with keys 'publications', 'certifications', and 'extras' that conform to the provided schema.\n\nFor publications: return an array of descriptive strings (each >= 40 chars) in the form 'Title — YEAR. One-line summary.' If a publication item is short, expand it into a descriptive summary.\n\nFor certifications: return structured objects with fields {name (required), issuer, date (ISO), url, description (max 140 chars)} and optionally include 'url_label' as a short human-friendly label (hostname or brand).\n\nFor extras: return objects {category, text} where text <= 140 chars.\n\nDo NOT include any other fields, commentary, or non-JSON text.\n\nJSON-SCHEMA:\n" + string(schemaBytes)
+	instr := fmt.Sprintf("Format the output in %s. Return ONLY a single JSON object with keys 'publications', 'certifications', and 'extras' that conform to the provided schema.\n\nFor publications: return an array of descriptive strings (each >= 40 chars) in the form 'Title — YEAR. One-line summary.' If a publication item is short, expand it into a descriptive summary.\n\nFor certifications: return structured objects with fields {name (required), issuer, date (ISO), url, description (max 140 chars)} and optionally include 'url_label' as a short human-friendly label (hostname or brand).\n\nFor extras: return objects {category, text} where text <= 140 chars.\n\nDo NOT include any other fields, commentary, or non-JSON text.\n\nJSON-SCHEMA:\n", pf.language) + string(schemaBytes)
 	
 	userCtx := map[string]interface{}{"payload": payload, "instructions": instr}
 	reqObj := map[string]interface{}{"agent": "auto", "input": "Format publications/certifications/extras:\n" + mustMarshal(userCtx)}

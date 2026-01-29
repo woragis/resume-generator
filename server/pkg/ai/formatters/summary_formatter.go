@@ -13,10 +13,11 @@ import (
 type SummaryFormatter struct {
 	client  *http.Client
 	baseURL string
+	language string
 }
 
-func NewSummaryFormatter(httpClient *http.Client, baseURL string) *SummaryFormatter {
-	return &SummaryFormatter{client: httpClient, baseURL: baseURL}
+func NewSummaryFormatter(httpClient *http.Client, baseURL string, language string) *SummaryFormatter {
+	return &SummaryFormatter{client: httpClient, baseURL: baseURL, language: language}
 }
 
 func (sf *SummaryFormatter) Format(ctx context.Context, payload map[string]interface{}) (map[string]interface{}, error) {
@@ -26,7 +27,7 @@ func (sf *SummaryFormatter) Format(ctx context.Context, payload map[string]inter
 		schemaBytes = b
 	}
 	
-	instr := "Return ONLY a single JSON object with keys 'summary' and 'meta'.\n\nCRITICAL:\n- summary: MUST be 80-220 characters\n- meta.name: preserve if possible\n- meta.headline: brief professional headline\n- meta.contact: MUST be an object {email: string, location: string}\n- Do NOT remove or change meta.social_links\n\nJSON-SCHEMA:\n" + string(schemaBytes)
+	instr := fmt.Sprintf("Format the output in %s. Return ONLY a single JSON object with keys 'summary' and 'meta'.\n\nCRITICAL:\n- summary: MUST be 80-220 characters\n- meta.name: preserve if possible\n- meta.headline: brief professional headline\n- meta.contact: MUST be an object {email: string, location: string}\n- Do NOT remove or change meta.social_links\n\nJSON-SCHEMA:\n", sf.language) + string(schemaBytes)
 	
 	userCtx := map[string]interface{}{"payload": payload, "instructions": instr}
 	reqObj := map[string]interface{}{"agent": "auto", "input": "Polish summary and meta:\n" + mustMarshal(userCtx)}

@@ -30,21 +30,25 @@ type JobsRepo interface {
 }
 
 type Processor struct {
-	renderer Renderer
-	repo     JobsRepo
-	tplDir   string
-	aiClient *ai.Client
+	renderer        Renderer
+	repo            JobsRepo
+	tplDir          string
+	aiClient        *ai.Client
+	defaultLanguage string
 }
 
-func NewProcessor(r Renderer, repo JobsRepo, tplDir string) *Processor {
-	return &Processor{renderer: r, repo: repo, tplDir: tplDir, aiClient: ai.NewClient()}
+func NewProcessor(r Renderer, repo JobsRepo, tplDir string, defaultLanguage string) *Processor {
+	return &Processor{renderer: r, repo: repo, tplDir: tplDir, aiClient: ai.NewClient(), defaultLanguage: defaultLanguage}
 }
 
 func (p *Processor) Process(ctx context.Context, job *domain.ResumeJob) error {
+	// Create AI client with the job's language
+	aiClient := ai.NewClientWithLanguage(job.Language)
+	
 	// aggregate data from DBs to provide a rich payload for the AI
 	var rawForAI interface{} = job.Profile
 	var aggregated interface{}
-	if p.aiClient != nil {
+	if aiClient != nil {
 		agg, err := repo.AggregateForUser(ctx, job.UserID.String())
 		if err == nil {
 			// keep the aggregated result for later merging if needed
@@ -177,18 +181,18 @@ func (p *Processor) Process(ctx context.Context, job *domain.ResumeJob) error {
 			}
 
 			// A: experience + projects
-			if p.aiClient != nil {
-				if out, e := p.aiClient.FormatExperienceProjects(ctx, payload); e == nil && out != nil {
+			if aiClient != nil {
+				if out, e := aiClient.FormatExperienceProjects(ctx, payload); e == nil && out != nil {
 					// validate against small schema
 					if err := model.ValidateMapWithSchema("templates/schema/experience.schema.json", out); err != nil {
 						fmt.Printf("processor: experience/projects validation failed: %v\n", err)
 						// attempt focused enrichment via EnrichResume to fix experience/projects
-						if p.aiClient != nil {
+						if aiClient != nil {
 							overrides := map[string]interface{}{}
 							if ex, ok := out["experience"]; ok { overrides["experience"] = ex }
 							if pr, ok := out["projects"]; ok { overrides["projects"] = pr }
 							if len(overrides) > 0 {
-								if enriched, enErr := p.aiClient.EnrichResume(ctx, resumeMap, overrides); enErr == nil && enriched != nil {
+								if enriched, enErr := aiClient.EnrichResume(ctx, resumeMap, overrides); enErr == nil && enriched != nil {
 									tmp := map[string]interface{}{}
 									if ex, ok := enriched["experience"]; ok { tmp["experience"] = ex }
 									if pr, ok := enriched["projects"]; ok { tmp["projects"] = pr }
@@ -211,18 +215,18 @@ func (p *Processor) Process(ctx context.Context, job *domain.ResumeJob) error {
 					fmt.Printf("processor: FormatExperienceProjects failed: %v\n", e)
 				}
 				// B: profile + snapshot
-				if out, e := p.aiClient.FormatProfileSnapshot(ctx, payload); e == nil && out != nil {
+				if out, e := aiClient.FormatProfileSnapshot(ctx, payload); e == nil && out != nil {
 					// validate profile snapshot small schema
 					if err := model.ValidateMapWithSchema("templates/schema/profile.schema.json", out); err != nil {
 						fmt.Printf("processor: profile/snapshot validation failed: %v\n", err)
 						// attempt focused enrichment first (EnrichFields) for snapshot/meta
-						if p.aiClient != nil {
+						if aiClient != nil {
 							overrides := map[string]interface{}{}
 							if ss, ok := out["snapshot"]; ok { overrides["snapshot"] = ss }
 							if mm, ok := out["meta"]; ok { overrides["meta"] = mm }
 							if len(overrides) > 0 {
 								// try targeted EnrichFields which returns only the requested keys
-								if fields, ferr := p.aiClient.EnrichFields(ctx, overrides); ferr == nil && fields != nil {
+								if fields, ferr := aiClient.EnrichFields(ctx, overrides); ferr == nil && fields != nil {
 									// merge returned fields into out
 									if ss, ok := fields["snapshot"]; ok { out["snapshot"] = ss }
 									if mm, ok := fields["meta"]; ok { out["meta"] = mm }
@@ -233,7 +237,7 @@ func (p *Processor) Process(ctx context.Context, job *domain.ResumeJob) error {
 									}
 								}
 								// fallback: broad EnrichResume
-								if enriched, enErr := p.aiClient.EnrichResume(ctx, resumeMap, overrides); enErr == nil && enriched != nil {
+								if enriched, enErr := aiClient.EnrichResume(ctx, resumeMap, overrides); enErr == nil && enriched != nil {
 									if ss, ok := enriched["snapshot"]; ok { out["snapshot"] = ss }
 									if mm, ok := enriched["meta"]; ok { out["meta"] = mm }
 									if err2 := model.ValidateMapWithSchema("templates/schema/profile.schema.json", out); err2 == nil {
@@ -255,12 +259,12 @@ func (p *Processor) Process(ctx context.Context, job *domain.ResumeJob) error {
 					fmt.Printf("processor: FormatProfileSnapshot failed: %v\n", e)
 				}
 				// C: publications + certifications + extras
-				if out, e := p.aiClient.FormatPublicationsCertsExtras(ctx, payload); e == nil && out != nil {
+				if out, e := aiClient.FormatPublicationsCertsExtras(ctx, payload); e == nil && out != nil {
 					if err := model.ValidateMapWithSchema("templates/schema/publications.schema.json", out); err != nil {
 						fmt.Printf("processor: publications/certs/extras validation failed: %v\n", err)
 						// try focused enrichment via EnrichFields (targeted) or EnrichResume fallback
-						if p.aiClient != nil {
-							if fields, ferr := p.aiClient.EnrichFields(ctx, out); ferr == nil && fields != nil {
+						if aiClient != nil {
+							if fields, ferr := aiClient.EnrichFields(ctx, out); ferr == nil && fields != nil {
 								// validate enriched fields merged into a tmp map
 								tmp := map[string]interface{}{"publications": fields["publications"], "certifications": fields["certifications"], "extras": fields["extras"]}
 								if err2 := model.ValidateMapWithSchema("templates/schema/publications.schema.json", tmp); err2 == nil {
@@ -270,7 +274,7 @@ func (p *Processor) Process(ctx context.Context, job *domain.ResumeJob) error {
 								}
 							} else {
 								// fallback to broad enrichment
-								if enriched, enErr := p.aiClient.EnrichResume(ctx, resumeMap, map[string]interface{}{"publications": out["publications"], "certifications": out["certifications"], "extras": out["extras"]}); enErr == nil && enriched != nil {
+								if enriched, enErr := aiClient.EnrichResume(ctx, resumeMap, map[string]interface{}{"publications": out["publications"], "certifications": out["certifications"], "extras": out["extras"]}); enErr == nil && enriched != nil {
 									tmp := map[string]interface{}{}
 									if pubs, ok := enriched["publications"]; ok { tmp["publications"] = pubs }
 									if certs, ok := enriched["certifications"]; ok { tmp["certifications"] = certs }
@@ -296,7 +300,7 @@ func (p *Processor) Process(ctx context.Context, job *domain.ResumeJob) error {
 				// D: summary + meta polish (final harmonization)
 				// assemble a lightweight assembled payload to give context
 				assembled := map[string]interface{}{"assembled": resumeMap, "aggregated": payload["aggregated"]}
-				if out, e := p.aiClient.FormatSummaryMeta(ctx, assembled); e == nil && out != nil {
+				if out, e := aiClient.FormatSummaryMeta(ctx, assembled); e == nil && out != nil {
 					// handle summary (respect length) and merge meta rather than overwrite
 					if s, ok := out["summary"].(string); ok {
 						if len(s) < 80 || len(s) > 220 {
@@ -332,7 +336,7 @@ func (p *Processor) Process(ctx context.Context, job *domain.ResumeJob) error {
 				baseResume[k] = v
 			}
 			} else {
-				resumeMap, warnings, synthesized, err = p.aiClient.FormatResume(ctx, rawForAI)
+				resumeMap, warnings, synthesized, err = aiClient.FormatResume(ctx, rawForAI)
 				if err != nil {
 					return err
 				}
@@ -349,11 +353,11 @@ func (p *Processor) Process(ctx context.Context, job *domain.ResumeJob) error {
 				if ovm, ok := ov.(map[string]interface{}); ok {
 					if _, hasPubs := ovm["publications"]; hasPubs {
 						// Focused enrichment: request only the override fields and hard-merge
-						fields, err := p.aiClient.EnrichFields(ctx, ovm)
+						fields, err := aiClient.EnrichFields(ctx, ovm)
 						if err != nil {
 							// fallback to broader EnrichResume if focused call fails
 							fmt.Printf("processor: enrich_fields failed: %v, falling back\n", err)
-							enriched, err2 := p.aiClient.EnrichResume(ctx, resumeMap, ovm)
+							enriched, err2 := aiClient.EnrichResume(ctx, resumeMap, ovm)
 							if err2 != nil {
 								fmt.Printf("processor: enrich step failed: %v\n", err2)
 							} else if enriched != nil {

@@ -13,18 +13,20 @@ import (
 )
 
 type Handler struct {
-	processor *usecase.Processor
-	repo      usecase.JobsRepo
+	processor       *usecase.Processor
+	repo            usecase.JobsRepo
+	defaultLanguage string
 }
 
-func NewHandler(p *usecase.Processor, r usecase.JobsRepo) *Handler {
-	return &Handler{processor: p, repo: r}
+func NewHandler(p *usecase.Processor, r usecase.JobsRepo, defaultLanguage string) *Handler {
+	return &Handler{processor: p, repo: r, defaultLanguage: defaultLanguage}
 }
 
 type startReq struct {
 	UserID           string `json:"userId"`
 	JobApplicationID string `json:"jobApplicationId"`
 	JobDescription   string `json:"jobDescription,omitempty"`
+	Language         string `json:"language,omitempty"`
 }
 
 func (h *Handler) StartJob(c *fiber.Ctx) error {
@@ -38,12 +40,19 @@ func (h *Handler) StartJob(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid userId"})
 	}
 
+	// Use provided language or fall back to default
+	language := req.Language
+	if language == "" {
+		language = h.defaultLanguage
+	}
+
 	job := &domain.ResumeJob{
 		ID:             uuid.New(),
 		UserID:         uid,
 		JobDescription: req.JobDescription,
 		Status:         "pending",
 		Metadata:       map[string]interface{}{},
+		Language:       language,
 		CreatedAt:      time.Now(),
 		UpdatedAt:      time.Now(),
 		Profile:        nil,

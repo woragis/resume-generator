@@ -13,10 +13,11 @@ import (
 type ProfileFormatter struct {
 	client  *http.Client
 	baseURL string
+	language string
 }
 
-func NewProfileFormatter(httpClient *http.Client, baseURL string) *ProfileFormatter {
-	return &ProfileFormatter{client: httpClient, baseURL: baseURL}
+func NewProfileFormatter(httpClient *http.Client, baseURL string, language string) *ProfileFormatter {
+	return &ProfileFormatter{client: httpClient, baseURL: baseURL, language: language}
 }
 
 func (pf *ProfileFormatter) Format(ctx context.Context, payload map[string]interface{}) (map[string]interface{}, error) {
@@ -26,7 +27,7 @@ func (pf *ProfileFormatter) Format(ctx context.Context, payload map[string]inter
 		schemaBytes = b
 	}
 	
-	instr := "Return ONLY a single JSON object with keys 'meta', 'summary', 'snapshot'.\n\nCRITICAL CONSTRAINTS:\n1. selected_projects: MUST be exactly 2 items, EACH item MUST be 40-150 characters (count every character, do NOT exceed 150).\n2. achievements: MUST be 3+ items, each 40+ characters.\n3. meta.contact: MUST be an object {email: string, location: string}.\n\nJSON-SCHEMA:\n" + string(schemaBytes)
+	instr := fmt.Sprintf("Format the output in %s. Return ONLY a single JSON object with keys 'meta', 'summary', 'snapshot'.\n\nCRITICAL CONSTRAINTS:\n1. selected_projects: MUST be exactly 2 items, EACH item MUST be 40-150 characters (count every character, do NOT exceed 150).\n2. achievements: MUST be 3+ items, each 40+ characters.\n3. meta.contact: MUST be an object {email: string, location: string}.\n\nJSON-SCHEMA:\n", pf.language) + string(schemaBytes)
 	
 	userCtx := map[string]interface{}{"payload": payload, "instructions": instr}
 	reqObj := map[string]interface{}{"agent": "auto", "input": "Format profile and snapshot:\n" + mustMarshal(userCtx)}
