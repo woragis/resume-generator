@@ -10,6 +10,8 @@ import (
 	"net/http"
 	"os"
 	"time"
+
+	"resume-generator/pkg/ai/formatters"
 )
 
 // Client calls the internal ai-service to format raw profile data into the
@@ -25,6 +27,28 @@ func NewClient() *Client {
 		base = "http://ai-service:8000"
 	}
 	return &Client{BaseURL: base, HTTP: &http.Client{Timeout: 60 * time.Second}}
+}
+
+// Formatter interface for the four specialized formatters
+type Formatter interface {
+	Format(ctx context.Context, payload map[string]interface{}) (map[string]interface{}, error)
+}
+
+// Factory methods to create formatters
+func (c *Client) NewExperienceFormatter() Formatter {
+	return formatters.NewExperienceFormatter(c.HTTP, c.BaseURL)
+}
+
+func (c *Client) NewProfileFormatter() Formatter {
+	return formatters.NewProfileFormatter(c.HTTP, c.BaseURL)
+}
+
+func (c *Client) NewPublicationsFormatter() Formatter {
+	return formatters.NewPublicationsFormatter(c.HTTP, c.BaseURL)
+}
+
+func (c *Client) NewSummaryFormatter() Formatter {
+	return formatters.NewSummaryFormatter(c.HTTP, c.BaseURL)
 }
 
 // doPostWithRetry performs an HTTP POST to the given path with retry/backoff.
@@ -352,143 +376,31 @@ func (c *Client) EnrichFields(ctx context.Context, overrides map[string]interfac
 
 // FormatExperienceProjects calls the AI to produce only the experience and
 // projects sections. It returns a map with keys "experience" and "projects".
+// This now delegates to the ExperienceFormatter.
 func (c *Client) FormatExperienceProjects(ctx context.Context, payload map[string]interface{}) (map[string]interface{}, error) {
-	// try to load a small schema to keep the prompt focused
-	schemaBytes := []byte{}
-	if b, err := os.ReadFile("templates/schema/experience.schema.json"); err == nil {
-		schemaBytes = b
-	}
-	instr := "Return ONLY a single JSON object with keys 'experience' and 'projects' that conform to the provided schema. For each experience entry include an optional 'summary' field: a concise 40-240 character paragraph describing the role and impact. Do NOT include any extra text."
-	if len(schemaBytes) > 0 {
-		instr = instr + "\n\nJSON-SCHEMA:\n" + string(schemaBytes)
-	}
-	userCtx := map[string]interface{}{"payload": payload, "instructions": instr}
-	reqObj := map[string]interface{}{"agent": "auto", "input": "Format experience and projects:\n" + mustMarshal(userCtx)}
-	b, _ := json.Marshal(reqObj)
-	fmt.Printf("ai.client: FormatExperienceProjects POST %s/v1/chat payload=%s\n", c.BaseURL, string(b))
-	resp, err := c.doPostWithRetry(ctx, "/v1/chat", b)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-	rb, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, err
-	}
-	fmt.Printf("ai.client: FormatExperienceProjects response status=%d body=%s\n", resp.StatusCode, string(rb))
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("ai-service returned non-200 status: %d", resp.StatusCode)
-	}
-	var chatResp struct{ Agent string `json:"agent"`; Output string `json:"output"` }
-	if err := json.Unmarshal(rb, &chatResp); err != nil {
-		return nil, err
-	}
-	var out map[string]interface{}
-	if err := json.Unmarshal([]byte(chatResp.Output), &out); err != nil {
-		// try substring
-		s := chatResp.Output
-		start := -1; end := -1
-		for i, r := range s { if r == '{' { start = i; break } }
-		for i := len(s)-1; i >= 0; i-- { if s[i] == '}' { end = i; break } }
-		if start >= 0 && end > start { sub := s[start:end+1]; if err2 := json.Unmarshal([]byte(sub), &out); err2 == nil { return out, nil } }
-		return nil, fmt.Errorf("ai-service returned non-json content: %w", err)
-	}
-	return out, nil
+	formatter := c.NewExperienceFormatter()
+	return formatter.Format(ctx, payload)
 }
 
 // FormatProfileSnapshot returns profile/meta/summary and snapshot fields.
+// This now delegates to the ProfileFormatter.
 func (c *Client) FormatProfileSnapshot(ctx context.Context, payload map[string]interface{}) (map[string]interface{}, error) {
-	schemaBytes := []byte{}
-	if b, err := os.ReadFile("templates/schema/profile.schema.json"); err == nil {
-		schemaBytes = b
-	}
-	instr := "Return ONLY a single JSON object containing meta, summary, and snapshot fields that conform to the provided schema. Do NOT include extra text. Preserve meta.social_links and do not modify provided URLs."
-	// strengthen snapshot requirements to reduce schema-drift and encourage
-	// the AI to always produce the minimal expected fields
-	instr = instr + "\n\nREQUIREMENTS FOR snapshot: provide exactly 3 or more achievements (array length >= 3), each achievement must be >= 40 characters; include 'selected_projects' as an array of 2 short project summaries (each >= 40 chars and <= 100 chars)."
-	if len(schemaBytes) > 0 { instr = instr + "\n\nJSON-SCHEMA:\n" + string(schemaBytes) }
-	userCtx := map[string]interface{}{"payload": payload, "instructions": instr}
-	reqObj := map[string]interface{}{"agent": "auto", "input": "Format profile and snapshot:\n" + mustMarshal(userCtx)}
-	b, _ := json.Marshal(reqObj)
-	fmt.Printf("ai.client: FormatProfileSnapshot POST %s/v1/chat payload=%s\n", c.BaseURL, string(b))
-	resp, err := c.doPostWithRetry(ctx, "/v1/chat", b)
-	if err != nil { return nil, err }
-	defer resp.Body.Close()
-	rb, err := io.ReadAll(resp.Body); if err != nil { return nil, err }
-	fmt.Printf("ai.client: FormatProfileSnapshot response status=%d body=%s\n", resp.StatusCode, string(rb))
-	if resp.StatusCode != http.StatusOK { return nil, fmt.Errorf("ai-service returned non-200 status: %d", resp.StatusCode) }
-	var chatResp struct{ Agent string `json:"agent"`; Output string `json:"output"` }
-	if err := json.Unmarshal(rb, &chatResp); err != nil { return nil, err }
-	var out map[string]interface{}
-	if err := json.Unmarshal([]byte(chatResp.Output), &out); err != nil {
-		s := chatResp.Output; start := -1; end := -1
-		for i, r := range s { if r == '{' { start = i; break } }
-		for i := len(s)-1; i >= 0; i-- { if s[i] == '}' { end = i; break } }
-		if start >= 0 && end > start { sub := s[start:end+1]; if err2 := json.Unmarshal([]byte(sub), &out); err2 == nil { return out, nil } }
-		return nil, fmt.Errorf("ai-service returned non-json content: %w", err)
-	}
-	return out, nil
+	formatter := c.NewProfileFormatter()
+	return formatter.Format(ctx, payload)
 }
 
 // FormatPublicationsCertsExtras returns publications/certifications/extras only.
+// This now delegates to the PublicationsFormatter.
 func (c *Client) FormatPublicationsCertsExtras(ctx context.Context, payload map[string]interface{}) (map[string]interface{}, error) {
-	schemaBytes := []byte{}
-	if b, err := os.ReadFile("templates/schema/publications.schema.json"); err == nil { schemaBytes = b }
-	instr := "Return ONLY a single JSON object with keys 'publications', 'certifications', and 'extras' that conform to the provided schema.\n\nFor publications: return an array of descriptive strings (each >= 40 chars) in the form 'Title — YEAR. One-line summary.' If a publication item is short, expand it into a descriptive summary.\n\nFor certifications: return structured objects with fields {name (required), issuer, date (ISO), url, description (max 140 chars)} and optionally include 'url_label' as a short human-friendly label (hostname or brand).\n\nFor extras: return objects {category, text} where text <= 140 chars.\n\nDo NOT include any other fields, commentary, or non-JSON text."
-	if len(schemaBytes) > 0 { instr = instr + "\n\nJSON-SCHEMA:\n" + string(schemaBytes) }
-	userCtx := map[string]interface{}{"payload": payload, "instructions": instr}
-	reqObj := map[string]interface{}{"agent": "auto", "input": "Format publications/certifications/extras:\n" + mustMarshal(userCtx)}
-	b, _ := json.Marshal(reqObj)
-	fmt.Printf("ai.client: FormatPublicationsCertsExtras POST %s/v1/chat payload=%s\n", c.BaseURL, string(b))
-	resp, err := c.doPostWithRetry(ctx, "/v1/chat", b)
-	if err != nil { return nil, err }
-	defer resp.Body.Close()
-	rb, err := io.ReadAll(resp.Body); if err != nil { return nil, err }
-	fmt.Printf("ai.client: FormatPublicationsCertsExtras response status=%d body=%s\n", resp.StatusCode, string(rb))
-	if resp.StatusCode != http.StatusOK { return nil, fmt.Errorf("ai-service returned non-200 status: %d", resp.StatusCode) }
-	var chatResp struct{ Agent string `json:"agent"`; Output string `json:"output"` }
-	if err := json.Unmarshal(rb, &chatResp); err != nil { return nil, err }
-	var out map[string]interface{}
-	if err := json.Unmarshal([]byte(chatResp.Output), &out); err != nil {
-		s := chatResp.Output; start := -1; end := -1
-		for i, r := range s { if r == '{' { start = i; break } }
-		for i := len(s)-1; i >= 0; i-- { if s[i] == '}' { end = i; break } }
-		if start >= 0 && end > start { sub := s[start:end+1]; if err2 := json.Unmarshal([]byte(sub), &out); err2 == nil { return out, nil } }
-		return nil, fmt.Errorf("ai-service returned non-json content: %w", err)
-	}
-	// Post-process and sanitize certifications to enforce schema rules
-	sanitizeCertifications(out)
-
-	return out, nil
+	formatter := c.NewPublicationsFormatter()
+	return formatter.Format(ctx, payload)
 }
 
 // FormatSummaryMeta returns a short polished summary and headline only.
+// This now delegates to the SummaryFormatter.
 func (c *Client) FormatSummaryMeta(ctx context.Context, payload map[string]interface{}) (map[string]interface{}, error) {
-	instr := "Return ONLY a single JSON object with keys 'summary' and 'meta' (meta.headline/contact) suitable for a resume. Keep summary 80-220 chars. Do not change other fields."
-	userCtx := map[string]interface{}{"payload": payload, "instructions": instr}
-	reqObj := map[string]interface{}{"agent": "auto", "input": "Polish summary and meta:\n" + mustMarshal(userCtx)}
-	b, _ := json.Marshal(reqObj)
-	fmt.Printf("ai.client: FormatSummaryMeta POST %s/v1/chat payload=%s\n", c.BaseURL, string(b))
-	resp, err := c.doPostWithRetry(ctx, "/v1/chat", b)
-	if err != nil { return nil, err }
-	defer resp.Body.Close()
-	rb, err := io.ReadAll(resp.Body); if err != nil { return nil, err }
-	fmt.Printf("ai.client: FormatSummaryMeta response status=%d body=%s\n", resp.StatusCode, string(rb))
-	if resp.StatusCode != http.StatusOK { return nil, fmt.Errorf("ai-service returned non-200 status: %d", resp.StatusCode) }
-	var chatResp struct{ Agent string `json:"agent"`; Output string `json:"output"` }
-	if err := json.Unmarshal(rb, &chatResp); err != nil { return nil, err }
-	var out map[string]interface{}
-	if err := json.Unmarshal([]byte(chatResp.Output), &out); err != nil {
-		s := chatResp.Output; start := -1; end := -1
-		for i, r := range s { if r == '{' { start = i; break } }
-		for i := len(s)-1; i >= 0; i-- { if s[i] == '}' { end = i; break } }
-		if start >= 0 && end > start { sub := s[start:end+1]; if err2 := json.Unmarshal([]byte(sub), &out); err2 == nil { return out, nil } }
-		return nil, fmt.Errorf("ai-service returned non-json content: %w", err)
-	}
-	// Ensure meta.contact is an object (coerce simple string emails to {"email": "..."})
-	sanitizeSummaryMeta(out)
-
-	return out, nil
+	formatter := c.NewSummaryFormatter()
+	return formatter.Format(ctx, payload)
 }
 
 // mustMarshal is a tiny helper for embedding example payloads in prompts.
