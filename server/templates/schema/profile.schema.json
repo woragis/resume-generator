@@ -25,17 +25,17 @@
     "snapshot": {
       "type": "object",
       "properties": {
-        "tech": { "type": "string", "minLength": 10, "maxLength": 120 },
+        "tech": { "type": "string", "minLength": 10, "maxLength": 180 },
         "achievements": {
           "type": "array",
           "minItems": 3,
-          "items": { "type": "string", "minLength": 40, "maxLength": 140 }
+          "items": { "type": "string", "minLength": 40, "maxLength": 210 }
         },
         "selected_projects": {
           "type": "array",
           "minItems": 2,
           "maxItems": 2,
-          "items": { "type": "string", "minLength": 40, "maxLength": 100 }
+          "items": { "type": "string", "minLength": 40, "maxLength": 150 }
         }
       },
       "required": ["tech", "achievements", "selected_projects"]

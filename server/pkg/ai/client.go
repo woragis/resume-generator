@@ -114,15 +114,15 @@ func (c *Client) FormatResume(ctx context.Context, rawProfile interface{}) (map[
 	constraints := `Strict field constraints (enforce exactly):
  - meta.name: string (required)
  - meta.headline: string (required)
- - summary: string, min 80, max 220 characters
- - snapshot.tech: string, min 10, max 120 characters
- - snapshot.achievements: array of 3 strings, each min 40, max 140 characters
- - snapshot.selected_projects: array of 2 strings, each min 40, max 100 characters
- - experience: array of objects with company (string), title (string), period (string), bullets: array of strings (each min 40, max 140)
- - projects: array of objects with id (string), title (string, max 80), url (uri), stack (string), description (80-220), bullets (array of strings 40-140)
+ - summary: string, min 80, max 330 characters
+ - snapshot.tech: string, min 10, max 180 characters
+ - snapshot.achievements: array of 3 strings, each min 40, max 210 characters
+ - snapshot.selected_projects: array of 2 strings, each min 40, max 150 characters
+ - experience: array of objects with company (string), title (string), period (string), bullets: array of strings (each min 40, max 210)
+ - projects: array of objects with id (string), title (string, max 120), url (uri), stack (string), description (80-330), bullets (array of strings 40-210)
 	 - publications: array of strings, each minLength 40
-	 - certifications: array of objects with fields {name: string (required), issuer: string, date: string (date), url: uri, description: string (max 140)}
-	 - extras: array of objects with {category: string, text: string (max 140)}
+	 - certifications: array of objects with fields {name: string (required), issuer: string, date: string (date), url: uri, description: string (max 210)}
+	 - extras: array of objects with {category: string, text: string (max 210)}
 
 If any field would exceed the max length, you MUST shorten or summarize the text so it fits the max.
 You MUST return ONLY valid JSON (a single object) and NOTHING ELSE — no commentary, no markdown, no code fences.
@@ -216,7 +216,7 @@ Example JSON skeleton (use this structure and follow the length limits):
 // ai-service to preserve and, if necessary, expand those override items to
 // meet schema constraints without changing other sections.
 func (c *Client) EnrichResume(ctx context.Context, baseResume map[string]interface{}, overrides map[string]interface{}) (map[string]interface{}, error) {
-	instr := "You will receive a previously validated resume JSON (base_resume) and a small set of override lists. Update ONLY the provided override fields and preserve other values. Supported override keys: publications, certifications, extras, snapshot, meta.\n\nFor publications: ensure each item is a descriptive string meeting the schema minLength; if short, expand into 'Title — YEAR. One-line summary.'\nFor certifications: return structured objects {name (required), issuer, date (ISO), url, description (<=140 chars)}.\nFor extras: return objects {category, text (<=140 chars)}.\nFor snapshot: ensure keys 'tech' (10-120 chars), 'achievements' (array with >=3 items, each >=40 chars), and 'selected_projects' (array of 2 items, each 40-100 chars). Expand or synthesize items to meet lengths as needed.\nFor meta: preserve existing meta.name if present; you may add or polish meta.headline and meta.contact but do NOT remove meta.name.\n\nReturn ONLY the full resume JSON object (same schema) and NOTHING ELSE."
+	instr := "You will receive a previously validated resume JSON (base_resume) and a small set of override lists. Update ONLY the provided override fields and preserve other values. Supported override keys: publications, certifications, extras, snapshot, meta.\n\nFor publications: ensure each item is a descriptive string meeting the schema minLength; if short, expand into 'Title — YEAR. One-line summary.'\nFor certifications: return structured objects {name (required), issuer, date (ISO), url, description (<=210 chars)}.\nFor extras: return objects {category, text (<=210 chars)}.\nFor snapshot: ensure keys 'tech' (10-180 chars), 'achievements' (array with >=3 items, each >=40 chars), and 'selected_projects' (array of 2 items, each 40-150 chars). Expand or synthesize items to meet lengths as needed.\nFor meta: preserve existing meta.name if present; you may add or polish meta.headline and meta.contact but do NOT remove meta.name.\n\nReturn ONLY the full resume JSON object (same schema) and NOTHING ELSE."
 
 	payloadObj := map[string]interface{}{
 		"base_resume":  baseResume,
@@ -298,7 +298,7 @@ func (c *Client) EnrichResume(ctx context.Context, baseResume map[string]interfa
 // risk of modifying other parts of the resume and makes targeted merging
 // safer.
 func (c *Client) EnrichFields(ctx context.Context, overrides map[string]interface{}) (map[string]interface{}, error) {
-	instr := `You will receive a small overrides object containing any of the keys: publications, certifications, extras, snapshot, meta. Return ONLY a single JSON object with those keys present (if provided) and values formatted exactly to match the schema:\n- publications -> array of descriptive strings (each >= 40 chars, e.g. "Title — YEAR. One-line summary.")\n- certifications -> array of objects {name (required), issuer, date (ISO), url, description (<=140 chars)}\n- extras -> array of objects {category, text (<=140 chars)}\n- snapshot -> object {tech: string (10-120 chars), achievements: array (>=3 items, each >=40 chars), selected_projects: array (2 items, each 40-100 chars)}\n- meta -> object; preserve meta.name if present and only add/polish headline/contact.\nDo NOT include any other fields, commentary, or formatting. If an input publication is short, expand it into a title+year+one-line summary. Example response: {"publications":["Title — 2023. One-line summary of the article's contributions."],"certifications":[{"name":"Cert A","issuer":"Org","date":"2024-01-01","url":"https://...","description":"One-line"}],"extras":[{"category":"Speaking","text":"Talk at Conf 2024"}],"snapshot":{"tech":"Go, GKE","achievements":["Achievement 1 expanded to 40+ chars...","Achievement 2 expanded to 40+ chars...","Achievement 3 expanded to 40+ chars..."],"selected_projects":["Project 1 — short summary 40+ chars","Project 2 — short summary 40+ chars"]}}`
+	instr := `You will receive a small overrides object containing any of the keys: publications, certifications, extras, snapshot, meta. Return ONLY a single JSON object with those keys present (if provided) and values formatted exactly to match the schema:\n- publications -> array of descriptive strings (each >= 40 chars, e.g. "Title — YEAR. One-line summary.")\n- certifications -> array of objects {name (required), issuer, date (ISO), url, description (<=140 chars)}\n- extras -> array of objects {category, text (<=140 chars)}\n- snapshot -> object {tech: string (10-180 chars), achievements: array (>=3 items, each >=40 chars), selected_projects: array (2 items, each 40-150 chars)}\n- meta -> object; preserve meta.name if present and only add/polish headline/contact.\nDo NOT include any other fields, commentary, or formatting. If an input publication is short, expand it into a title+year+one-line summary. Example response: {"publications":["Title — 2023. One-line summary of the article's contributions."],"certifications":[{"name":"Cert A","issuer":"Org","date":"2024-01-01","url":"https://...","description":"One-line"}],"extras":[{"category":"Speaking","text":"Talk at Conf 2024"}],"snapshot":{"tech":"Go, GKE","achievements":["Achievement 1 expanded to 40+ chars...","Achievement 2 expanded to 40+ chars...","Achievement 3 expanded to 40+ chars..."],"selected_projects":["Project 1 — short summary 40+ chars","Project 2 — short summary 40+ chars"]}}`
 
 	payloadObj := map[string]interface{}{
 		"overrides":    overrides,

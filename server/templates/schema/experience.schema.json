@@ -11,10 +11,10 @@
           "company": { "type": "string" },
           "title": { "type": "string" },
           "period": { "type": "string" },
-          "summary": { "type": "string", "minLength": 40, "maxLength": 240 },
+          "summary": { "type": "string", "minLength": 40, "maxLength": 360 },
           "bullets": {
             "type": "array",
-            "items": { "type": "string", "minLength": 40, "maxLength": 140 }
+            "items": { "type": "string", "minLength": 40, "maxLength": 210 }
           }
         },
         "required": ["company", "title"]
@@ -26,17 +26,17 @@
         "type": "object",
         "properties": {
           "id": { "type": "string" },
-          "title": { "type": "string", "maxLength": 80 },
+          "title": { "type": "string", "maxLength": 120 },
           "url": { "type": "string", "format": "uri" },
           "stack": { "type": "string" },
           "description": {
             "type": "string",
             "minLength": 80,
-            "maxLength": 220
+            "maxLength": 330
           },
           "bullets": {
             "type": "array",
-            "items": { "type": "string", "minLength": 40, "maxLength": 140 }
+            "items": { "type": "string", "minLength": 40, "maxLength": 210 }
           }
         },
         "required": ["id", "title", "description"]

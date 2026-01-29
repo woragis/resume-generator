@@ -15,7 +15,7 @@
           "issuer": { "type": "string" },
           "date": { "type": "string", "format": "date" },
           "url": { "type": "string", "format": "uri" },
-          "description": { "type": "string", "maxLength": 140 },
+          "description": { "type": "string", "maxLength": 210 },
           "url_label": { "type": "string" }
         },
         "required": ["name"]
@@ -27,7 +27,7 @@
         "type": "object",
         "properties": {
           "category": { "type": "string" },
-          "text": { "type": "string", "maxLength": 140 }
+          "text": { "type": "string", "maxLength": 210 }
         },
         "required": ["category", "text"]
       }

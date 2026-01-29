@@ -26,7 +26,7 @@ func (pf *ProfileFormatter) Format(ctx context.Context, payload map[string]inter
 		schemaBytes = b
 	}
 	
-	instr := "Return ONLY a single JSON object with keys 'meta', 'summary', 'snapshot'.\n\nCRITICAL CONSTRAINTS:\n1. selected_projects: MUST be exactly 2 items, EACH item MUST be 40-100 characters (count every character, do NOT exceed 100).\n2. achievements: MUST be 3+ items, each 40+ characters.\n3. meta.contact: MUST be an object {email: string, location: string}.\n\nJSON-SCHEMA:\n" + string(schemaBytes)
+	instr := "Return ONLY a single JSON object with keys 'meta', 'summary', 'snapshot'.\n\nCRITICAL CONSTRAINTS:\n1. selected_projects: MUST be exactly 2 items, EACH item MUST be 40-150 characters (count every character, do NOT exceed 150).\n2. achievements: MUST be 3+ items, each 40+ characters.\n3. meta.contact: MUST be an object {email: string, location: string}.\n\nJSON-SCHEMA:\n" + string(schemaBytes)
 	
 	userCtx := map[string]interface{}{"payload": payload, "instructions": instr}
 	reqObj := map[string]interface{}{"agent": "auto", "input": "Format profile and snapshot:\n" + mustMarshal(userCtx)}
