@@ -60,6 +60,11 @@ func (c *Client) NewSummaryFormatter() Formatter {
 	return formatters.NewSummaryFormatter(c.HTTP, c.BaseURL, c.DefaultLanguage)
 }
 
+func (c *Client) FormatLabels(ctx context.Context) (map[string]string, error) {
+	lf := formatters.NewLabelsFormatter(c.HTTP, c.BaseURL, c.DefaultLanguage)
+	return lf.Format(ctx)
+}
+
 // doPostWithRetry performs an HTTP POST to the given path with retry/backoff.
 func (c *Client) doPostWithRetry(ctx context.Context, path string, body []byte) (*http.Response, error) {
 	attempts := 3

@@ -16,6 +16,7 @@ import (
 	"resume-generator/internal/domain"
 	"resume-generator/internal/model"
 	ai "resume-generator/pkg/ai"
+	"resume-generator/pkg/ai/formatters"
 
 	"github.com/google/uuid"
 	"golang.org/x/net/publicsuffix"
@@ -815,6 +816,17 @@ func (p *Processor) Process(ctx context.Context, job *domain.ResumeJob) error {
 		}
 		job.Metadata["ai_warnings"] = warnings
 		job.Metadata["ai_synthesized"] = synthesized
+
+		// Format UI labels in the specified language
+		labels, labErr := aiClient.FormatLabels(ctx)
+		if labErr != nil {
+			fmt.Printf("processor: FormatLabels failed: %v, using defaults\n", labErr)
+			labels = formatters.GetDefaultLabels()
+		}
+		if labels != nil {
+			resumeMap["labels"] = labels
+			fmt.Printf("processor: formatted labels in %s\n", job.Language)
+		}
 	}
 
 	// render HTML

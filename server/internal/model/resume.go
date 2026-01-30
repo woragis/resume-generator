@@ -31,12 +31,13 @@ type Project struct {
 }
 
 type Resume struct {
-	Meta           Meta      `json:"meta"`
-	Summary        string    `json:"summary"`
-	Snapshot       Snapshot  `json:"snapshot"`
-	Experience     []Role    `json:"experience"`
-	Projects       []Project `json:"projects"`
-	Publications   []string  `json:"publications,omitempty"`
-	Certifications []string  `json:"certifications,omitempty"`
-	Extras         string    `json:"extras,omitempty"`
+	Meta           Meta                  `json:"meta"`
+	Summary        string                `json:"summary"`
+	Snapshot       Snapshot              `json:"snapshot"`
+	Experience     []Role                `json:"experience"`
+	Projects       []Project             `json:"projects"`
+	Publications   []string              `json:"publications,omitempty"`
+	Certifications []string              `json:"certifications,omitempty"`
+	Extras         string                `json:"extras,omitempty"`
+	Labels         map[string]string     `json:"labels,omitempty"`
 }

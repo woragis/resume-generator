@@ -23,22 +23,22 @@
       },
       "required": ["name", "headline"]
     },
-    "summary": { "type": "string", "minLength": 80, "maxLength": 220 },
+    "summary": { "type": "string" },
     "snapshot": {
       "type": "object",
       "properties": {
-        "tech": { "type": "string", "minLength": 10, "maxLength": 120 },
+        "tech": { "type": "string" },
         "achievements": {
           "type": "array",
           "minItems": 3,
           "maxItems": 3,
-          "items": { "type": "string", "minLength": 40, "maxLength": 140 }
+          "items": { "type": "string" }
         },
         "selected_projects": {
           "type": "array",
           "minItems": 2,
           "maxItems": 2,
-          "items": { "type": "string", "minLength": 40, "maxLength": 100 }
+          "items": { "type": "string" }
         }
       },
       "required": ["tech", "achievements", "selected_projects"]
@@ -51,10 +51,10 @@
           "company": { "type": "string" },
           "title": { "type": "string" },
           "period": { "type": "string" },
-          "summary": { "type": "string", "minLength": 40, "maxLength": 240 },
+          "summary": { "type": "string" },
           "bullets": {
             "type": "array",
-            "items": { "type": "string", "minLength": 40, "maxLength": 140 }
+            "items": { "type": "string" }
           }
         },
         "required": ["company", "title"]
@@ -66,17 +66,15 @@
         "type": "object",
         "properties": {
           "id": { "type": "string" },
-          "title": { "type": "string", "maxLength": 80 },
+          "title": { "type": "string" },
           "url": { "type": "string", "format": "uri" },
           "stack": { "type": "string" },
           "description": {
-            "type": "string",
-            "minLength": 80,
-            "maxLength": 220
+            "type": "string"
           },
           "bullets": {
             "type": "array",
-            "items": { "type": "string", "minLength": 40, "maxLength": 140 }
+            "items": { "type": "string" }
           }
         },
         "required": ["id", "title", "description"]
@@ -84,7 +82,7 @@
     },
     "publications": {
       "type": "array",
-      "items": { "type": "string", "minLength": 40 }
+      "items": { "type": "string" }
     },
     "certifications": {
       "type": "array",
@@ -95,7 +93,7 @@
           "issuer": { "type": "string" },
           "date": { "type": "string", "format": "date" },
           "url": { "type": "string", "format": "uri" },
-          "description": { "type": "string", "maxLength": 140 }
+          "description": { "type": "string" }
         },
         "required": ["name"]
       }
@@ -106,7 +104,7 @@
         "type": "object",
         "properties": {
           "category": { "type": "string" },
-          "text": { "type": "string", "maxLength": 140 }
+          "text": { "type": "string" }
         },
         "required": ["category", "text"]
       }

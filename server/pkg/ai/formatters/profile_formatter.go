@@ -27,7 +27,7 @@ func (pf *ProfileFormatter) Format(ctx context.Context, payload map[string]inter
 		schemaBytes = b
 	}
 	
-	instr := fmt.Sprintf("Format the output in %s. Return ONLY a single JSON object with keys 'meta', 'summary', 'snapshot'.\n\nCRITICAL CONSTRAINTS:\n1. selected_projects: MUST be exactly 2 items, EACH item MUST be 40-150 characters (count every character, do NOT exceed 150).\n2. achievements: MUST be 3+ items, each 40+ characters.\n3. meta.contact: MUST be an object {email: string, location: string}.\n\nJSON-SCHEMA:\n", pf.language) + string(schemaBytes)
+	instr := fmt.Sprintf("LANGUAGE: You MUST format ALL output in %s. Translate every single field and string value into %s. Every piece of text must be in %s.\n\nReturn ONLY a single JSON object with keys 'meta', 'summary', 'snapshot'.\n\nCRITICAL CONSTRAINTS:\n1. selected_projects: MUST be exactly 2 items, EACH item should be 40-200 characters (aim for quality over strict length). MUST be in %s.\n2. achievements: MUST be 3+ items, each 40+ characters. MUST be in %s.\n3. snapshot.tech: aim for 150-250 characters, prioritize meaningful content. MUST be in %s.\n4. meta.contact: MUST be an object {email: string, location: string}.\n\nREMEMBER: ALL content MUST be in %s. Do NOT include any English text. Prioritize meaningful content.\n\nJSON-SCHEMA:\n", pf.language, pf.language, pf.language, pf.language, pf.language, pf.language, pf.language) + string(schemaBytes)
 	
 	userCtx := map[string]interface{}{"payload": payload, "instructions": instr}
 	reqObj := map[string]interface{}{"agent": "auto", "input": "Format profile and snapshot:\n" + mustMarshal(userCtx)}

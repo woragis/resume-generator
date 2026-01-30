@@ -120,7 +120,7 @@ func AggregateForUser(ctx context.Context, userID string) (AggregateResult, erro
 		}
 	}
 
-	// Management DB: experiences, testimonials, technologies
+	// Management DB: experiences, testimonials, technologies, projects, case studies
 	if pool, err := connectPool(ctx, "MGMT_DATABASE_URL"); err == nil {
 		defer pool.Close()
 		if v, err := queryJSON(ctx, pool, `SELECT coalesce(json_agg(row_to_json(e)), '[]') FROM experiences e WHERE e.user_id::text=$1`, userID); err == nil {
@@ -131,6 +131,10 @@ func AggregateForUser(ctx context.Context, userID string) (AggregateResult, erro
 		}
 		if v, err := queryJSON(ctx, pool, `SELECT coalesce(json_agg(row_to_json(pt)), '[]') FROM project_technologies pt WHERE pt.user_id::text=$1 OR pt.project_owner_id::text=$1`, userID); err == nil {
 			res["project_technologies"] = v
+		}
+		// Fetch project case studies and store as "projects" for resume generation
+		if v, err := queryJSON(ctx, pool, `SELECT coalesce(json_agg(row_to_json(cs)), '[]') FROM project_case_studies cs WHERE cs.project_id IN (SELECT id FROM projects WHERE user_id::text=$1)`, userID); err == nil {
+			res["projects"] = v
 		}
 		// Attempt to fetch certifications from the management DB (optional)
 		if v, err := queryJSON(ctx, pool, `SELECT coalesce(json_agg(row_to_json(c)), '[]') FROM certifications c WHERE c.user_id::text=$1`, userID); err == nil {

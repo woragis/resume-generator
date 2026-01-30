@@ -71,36 +71,56 @@ body {
 }
 .header {
   border-bottom: 1px solid rgba(46, 91, 115, 0.1);
-  padding-bottom: var(--space-sm);
-  margin-bottom: var(--space-md);
+  padding-bottom: 0.3rem;
+  margin-bottom: 0.4rem;
 }
 .name {
   font-size: var(--fs-lg);
   font-weight: 700;
 }
-.meta {
+.headline {
   font-size: var(--fs-sm);
   color: var(--muted);
-  margin-top: 0.4rem;
+  margin-top: 0.3rem;
+  margin-bottom: 0.35rem;
+  font-weight: 500;
 }
 
-.social-links {
-  display: inline-flex;
-  gap: 0.4rem;
-  align-items: center;
-  flex-wrap: wrap;
+.contact-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-top: 0.4rem;
+  padding-top: 0rem;
+  font-size: var(--fs-xs);
 }
-.social-links .sep {
-  color: var(--muted);
-}
-.social-link {
-  color: var(--accent-700);
+
+.contact-item {
+  display: block;
+  color: var(--text);
   text-decoration: none;
-  font-weight: 600;
-  font-size: 0.95rem;
 }
-.social-link::before {
-  display: none; /* disable pseudo-icons for better PDF rendering */
+
+.contact-item.social-link {
+  color: var(--text);
+  font-weight: normal;
+}
+
+.contact-item.social-link:hover {
+  opacity: 1;
+}
+
+.contact-item .icon {
+  display: none;
+}
+
+.contact-item a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.contact-item a:hover {
+  text-decoration: underline;
 }
 
 .layout {
@@ -120,18 +140,18 @@ body {
 h2 {
   color: var(--accent-700);
   font-size: var(--fs-md);
-  margin: var(--space-md) 0 0.35rem 0;
+  margin: 0.4rem 0 0.2rem 0;
   font-weight: 700;
 }
 h3 {
   font-size: 0.95rem;
-  margin: 0.6rem 0 0.35rem 0;
+  margin: 0.35rem 0 0.2rem 0;
   color: var(--accent);
   font-weight: 600;
 }
 
 .main .role {
-  margin-bottom: var(--space-md);
+  margin-bottom: 0.4rem;
   page-break-inside: avoid;
   padding-left: 0.6rem;
   border-left: 3px solid var(--accent-300);
@@ -142,10 +162,10 @@ h3 {
   color: var(--muted-dark);
 }
 .role-summary {
-  padding: 0.35rem 0.45rem;
+  padding: 0.25rem 0.35rem;
   background: rgba(46, 91, 115, 0.03);
   border-radius: 4px;
-  margin: 0.35rem 0 0.35rem 0;
+  margin: 0.2rem 0 0.2rem 0;
   font-size: 0.92rem;
   line-height: 1.4;
 }
@@ -154,7 +174,7 @@ ul {
   padding: 0;
 }
 li {
-  margin: 0.45rem 0;
+  margin: 0.25rem 0;
   font-size: var(--fs-sm);
   line-height: 1.4;
   color: var(--muted-dark);
@@ -238,10 +258,7 @@ li {
     font-size: var(--fs-xs);
     color: var(--muted);
   }
-  /* Do not append full URLs for certification appendix links (we render short labels) */
-  .cert-appendix a::after {
-    content: none !important;
-  }
+
   /* Improve text wrapping */
   h2,
   h3 {
@@ -474,43 +491,54 @@ a {
   color: var(--accent);
 }
 
-/* Appendix: full cert details (printed/verification) */
-.cert-appendix {
-  margin-top: 0.75rem;
+/* Certifications list styling */
+.certs-list {
+  margin: 0.25rem 0 0 1rem;
+  padding: 0;
+  list-style: none;
+}
+
+.certs-list li {
+  margin: 0.35rem 0;
   font-size: 0.85rem;
   color: var(--muted-dark);
+  line-height: 1.4;
 }
-.cert-appendix ul {
-  margin: 0.25rem 0 0 1rem;
+
+.certs-list li strong {
+  color: var(--text);
+  font-weight: 600;
 }
-.cert-appendix li {
-  margin: 0.35rem 0;
+
+.certs-list a {
+  color: var(--accent);
+  text-decoration: none;
 }
-.cert-desc-block {
+
+.certs-list a:hover {
+  text-decoration: underline;
+}
+
+.cert-desc {
   margin-top: 0.25rem;
   color: var(--muted);
   font-size: 0.8rem;
-}
-
-@media screen {
-  /* hide appendix on small screens to save space */
-  .cert-appendix {
-    display: none;
-  }
+  line-height: 1.35;
 }
 
 @media print {
-  /* show appendix in print/PDF and hide compact inline tokens */
-  .cert-inline {
-    display: none;
-  }
-  .cert-appendix {
+  /* show certs list in print/PDF */
+  .certs-list {
     display: block;
     font-size: var(--fs-sm);
   }
-  /* Hide any inline cert URL anchors on screen while keeping them in the appendix/print */
+  /* Hide any inline cert URL anchors on screen while keeping them in print */
   .cert-url a {
     display: none !important;
+  }
+  /* Do not append full URLs for certification links in print */
+  .certs-list a::after {
+    content: none !important;
   }
   /* Maintain color-coded extras in print */
   .extras-grid {

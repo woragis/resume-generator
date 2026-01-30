@@ -4,7 +4,7 @@
   "properties": {
     "publications": {
       "type": "array",
-      "items": { "type": "string", "minLength": 40 }
+      "items": { "type": "string" }
     },
     "certifications": {
       "type": "array",
@@ -15,7 +15,7 @@
           "issuer": { "type": "string" },
           "date": { "type": "string", "format": "date" },
           "url": { "type": "string", "format": "uri" },
-          "description": { "type": "string", "maxLength": 210 },
+          "description": { "type": "string" },
           "url_label": { "type": "string" }
         },
         "required": ["name"]
@@ -27,7 +27,7 @@
         "type": "object",
         "properties": {
           "category": { "type": "string" },
-          "text": { "type": "string", "maxLength": 210 }
+          "text": { "type": "string" }
         },
         "required": ["category", "text"]
       }

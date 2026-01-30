@@ -17,17 +17,36 @@
     <div class="page">
       <header class="header">
         <div class="name">{{ index (index .Profile "meta") "name" }}</div>
-        <div class="meta">
-          {{ index (index .Profile "meta") "headline" }}
-          {{ with index (index .Profile "meta") "contact" }} — {{ index . "email" }}{{ end }}
-
-          {{ with index (index .Profile "meta") "social_links" }}
-            <span class="social-links">
-              {{ with index . "linkedin" }}<a class="social-link linkedin" href="{{ . }}" target="_blank" rel="noopener">LinkedIn</a>{{ end }}
-              {{ with index . "github" }}<span class="sep"> — </span><a class="social-link github" href="{{ . }}" target="_blank" rel="noopener">GitHub</a>{{ end }}
-              {{ with index . "website" }}<span class="sep"> — </span><a class="social-link website" href="{{ . }}" target="_blank" rel="noopener">Website</a>{{ end }}
-              {{ range $k, $v := . }}{{ if and (ne $k "linkedin") (ne $k "github") (ne $k "website") }}<span class="sep"> — </span><a class="social-link other" href="{{ $v }}" target="_blank" rel="noopener">{{ $k }}</a>{{ end }}{{ end }}
+        <div class="headline">{{ index (index .Profile "meta") "headline" }}</div>
+        
+        <!-- Contact Information Section -->
+        <div class="contact-bar">
+          {{ with index (index .Profile "meta") "contact" }}
+            <span class="contact-item email">
+              <span class="icon">📧</span>
+              <a href="mailto:{{ index . "email"}}">{{ index . "email" }}</a>
             </span>
+            {{ with index . "location" }}
+              <span class="contact-item location">
+                <span class="icon">📍</span>
+                <span>{{ . }}</span>
+              </span>
+            {{ end }}
+          {{ end }}
+          
+          {{ with index (index .Profile "meta") "social_links" }}
+            {{ with index . "github" }}
+              <a class="contact-item social-link github" href="{{ . }}" target="_blank" rel="noopener">
+                <span class="icon">🔗</span>
+                <span>GitHub</span>
+              </a>
+            {{ end }}
+            {{ with index . "linkedin" }}
+              <a class="contact-item social-link linkedin" href="{{ . }}" target="_blank" rel="noopener">
+                <span class="icon">💼</span>
+                <span>LinkedIn</span>
+              </a>
+            {{ end }}
           {{ end }}
         </div>
       </header>
@@ -37,36 +56,38 @@
       <div class="layout">
         <main class="main">
           <section class="summary">
-            <h2>Professional Summary</h2>
+            <h2>{{ if index .Profile "labels" }}{{ index (index .Profile "labels") "professional_summary" }}{{ else }}Professional Summary{{ end }}</h2>
             <p>{{ index .Profile "summary" }}</p>
           </section>
 
           {{ with index .Profile "snapshot" }}
           <section class="snapshot">
-            <h3>Tech Snapshot</h3>
+            <h3>{{ if index $.Profile "labels" }}{{ index (index $.Profile "labels") "tech_snapshot" }}{{ else }}Tech Snapshot{{ end }}</h3>
             <div>{{ index . "tech" }}</div>
 
-            <h3>Top Achievements</h3>
+            <h3>{{ if index $.Profile "labels" }}{{ index (index $.Profile "labels") "top_achievements" }}{{ else }}Top Achievements{{ end }}</h3>
             <ul class="achievements">
-              {{ range $i, $a := index . "achievements" }}<li>{{ $a }}</li>{{ end }}
+              {{ range $a := index . "achievements" }}<li>{{ $a }}</li>{{ end }}
             </ul>
 
-            <h3>Selected Projects</h3>
+            <h3>{{ if index $.Profile "labels" }}{{ index (index $.Profile "labels") "selected_projects" }}{{ else }}Selected Projects{{ end }}</h3>
             <ul class="selected-projects">
-              {{ range $i, $p := index . "selected_projects" }}<li>{{ $p }}</li>{{ end }}
+              {{ range $p := index . "selected_projects" }}<li>{{ $p }}</li>{{ end }}
             </ul>
           </section>
           {{ end }}
 
           {{ with index .Profile "experience" }}
           <section class="experience">
-            <h2>Experience</h2>
+            <h2>{{ if index $.Profile "labels" }}{{ index (index $.Profile "labels") "experience" }}{{ else }}Experience{{ end }}</h2>
             {{ range $i, $r := . }}
+              {{ if lt $i 2 }}
               <div class="role">
                 <div class="role-head">{{ index $r "company" }} — {{ index $r "title" }}{{ if index $r "period" }} | {{ index $r "period" }}{{ end }}</div>
                 {{ if index $r "summary" }}<p class="role-summary">{{ index $r "summary" }}</p>{{ end }}
-                {{ if index $r "bullets" }}<ul>{{ range $j, $b := index $r "bullets" }}<li>{{ $b }}</li>{{ end }}</ul>{{ end }}
+                {{ if index $r "bullets" }}<ul>{{ range $b := index $r "bullets" }}<li>{{ $b }}</li>{{ end }}</ul>{{ end }}
               </div>
+              {{ end }}
             {{ end }}
           </section>
           {{ end }}
@@ -74,45 +95,45 @@
         </main>
       </div>
 
-      <footer class="foot">References available on request</footer>
+      <footer class="foot">{{ if index .Profile "labels" }}{{ index (index .Profile "labels") "references_available" }}{{ else }}References available on request{{ end }}</footer>
     </div>
 
     <!-- Page 2 -->
     <div class="page">
       <header class="header">
         <div class="name">{{ index (index .Profile "meta") "name" }}</div>
-        <div class="meta">Page 2 — Projects & Publications</div>
+        <div class="meta">{{ if index .Profile "labels" }}{{ index (index .Profile "labels") "page_2_projects_publications" }}{{ else }}Page 2 — Projects & Publications{{ end }}</div>
       </header>
 
       <div class="layout">
         <main class="main">
           <section class="projects">
-            <h2>Projects — Case Studies</h2>
+            <h2>{{ if index $.Profile "labels" }}{{ index (index $.Profile "labels") "projects_case_studies" }}{{ else }}Projects — Case Studies{{ end }}</h2>
             {{ with index .Profile "projects" }}
               {{ range $i, $p := . }}
                 <div class="project" id="project-{{ $i }}">
                   <div class="proj-title">{{ index $p "title" }}{{ if index $p "url" }} — <a href="{{ index $p "url" }}" target="_blank" rel="noopener">link</a>{{ end }}</div>
                   <div class="proj-desc">{{ index $p "description" }}</div>
-                  {{ if index $p "bullets" }}<ul>{{ range $j, $b := index $p "bullets" }}<li>{{ $b }}</li>{{ end }}</ul>{{ end }}
+                  {{ if index $p "bullets" }}<ul>{{ range $b := index $p "bullets" }}<li>{{ $b }}</li>{{ end }}</ul>{{ end }}
                 </div>
               {{ end }}
             {{ end }}
           </section>
 
           <section class="publications">
-            <h2>Publications</h2>
+            <h2>{{ if index .Profile "labels" }}{{ index (index .Profile "labels") "publications" }}{{ else }}Publications{{ end }}</h2>
             <ul class="pub-list">
-              {{ range $i, $pub := index .Profile "publications" }}<li class="pub-item">{{ $pub }}</li>{{ end }}
+              {{ range $pub := index .Profile "publications" }}<li class="pub-item">{{ $pub }}</li>{{ end }}
             </ul>
           </section>
 
           <section class="education">
-            <h2>Continuous Learning & Community</h2>
+            <h2>{{ if index $.Profile "labels" }}{{ index (index $.Profile "labels") "continuous_learning_community" }}{{ else }}Continuous Learning & Community{{ end }}</h2>
             
             {{ with index .Profile "extras" }}
               <div class="extras-section">
                 <div class="extras-grid">
-                  {{ range $i, $e := . }}
+                  {{ range $e := . }}
                     <span class="extra-token" data-category="{{ index $e "category" }}"><strong>{{ index $e "category" }}:</strong> {{ index $e "text" }}</span>
                   {{ end }}
                 </div>
@@ -120,43 +141,22 @@
             {{ end }}
 
             {{ with index .Profile "certifications" }}
-              <h3 class="certs-subheading">Certifications</h3>
-              <div class="cert-inline" aria-label="Certifications">
-                {{ $first := true }}
-                {{ range $i, $c := . }}
-                  {{ if not $first }}<span class="cert-sep"> · </span>{{ end }}
-                  <span class="cert-token">
-                    <span class="cert-name">{{ index $c "name" }}</span>
-                    {{ if index $c "issuer" }}<span class="cert-meta"> ({{ index $c "issuer" }})</span>{{ end }}
-                    {{ if index $c "date" }}<span class="cert-year"> {{ index $c "date" }}</span>{{ end }}
-                  </span>
-                  {{ $first = false }}
-                {{ end }}
-              </div>
-            {{ end }}
-          </section>
-
-          <!-- Certifications appendix with full details for print/verification (show top 4 on print) -->
-          {{ with index .Profile "certifications" }}
-          <section class="cert-appendix">
-            <h3>Certifications — details</h3>
-            <ul>
-              {{ range $i, $c := . }}
-                {{ if lt $i 4 }}
+              <h3 class="certs-subheading">{{ if index $.Profile "labels" }}{{ index (index $.Profile "labels") "certifications" }}{{ else }}Certifications{{ end }}</h3>
+              <ul class="certs-list">
+                {{ range $c := . }}
                 <li>
                   <strong>{{ index $c "name" }}</strong>{{ if index $c "issuer" }} — {{ index $c "issuer" }}{{ end }}{{ if index $c "date" }} ({{ index $c "date" }}){{ end }}
                   {{ if index $c "url" }} — <a href="{{ index $c "url" }}" target="_blank" rel="noopener">{{ if index $c "url_label" }}{{ index $c "url_label" }}{{ else }}link{{ end }}</a>{{ end }}
-                  {{ if index $c "description" }}<div class="cert-desc-block">{{ index $c "description" }}</div>{{ end }}
+                  {{ if index $c "description" }}<div class="cert-desc">{{ index $c "description" }}</div>{{ end }}
                 </li>
                 {{ end }}
-              {{ end }}
-            </ul>
+              </ul>
+            {{ end }}
           </section>
-          {{ end }}
         </main>
       </div>
 
-      <footer class="foot">References available on request</footer>
+      <footer class="foot">{{ if index .Profile "labels" }}{{ index (index .Profile "labels") "references_available" }}{{ else }}References available on request{{ end }}</footer>
     </div>
   </body>
 </html>

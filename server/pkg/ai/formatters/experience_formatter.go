@@ -27,7 +27,7 @@ func (ef *ExperienceFormatter) Format(ctx context.Context, payload map[string]in
 		schemaBytes = b
 	}
 	
-	instr := fmt.Sprintf("Format the output in %s. Return ONLY a single JSON object with keys 'experience' and 'projects' that conform to the provided schema. For each experience entry include an optional 'summary' field: a concise 40-240 character paragraph describing the role and impact. Do NOT include any extra text.\n\nJSON-SCHEMA:\n", ef.language) + string(schemaBytes)
+	instr := fmt.Sprintf("LANGUAGE: You MUST format ALL output in %s. Translate every single field and string value into %s. Every piece of text must be in %s.\n\nReturn ONLY a single JSON object with keys 'experience' and 'projects' that conform to the provided schema. For each experience entry include an optional 'summary' field: a meaningful paragraph (aim for 100-300 characters) describing the role and impact.\n\nIMPORTANT: For projects that do NOT have a 'url' field or have a null/empty url, use the user's GitHub link provided in the payload (aggregated.profiles[0].social_links.github). This is the default link for projects without their own URL.\n\nDo NOT include any extra text beyond the JSON.\n\nREMEMBER: ALL content MUST be in %s. Do NOT include any English text. Prioritize meaningful content.\n\nJSON-SCHEMA:\n", ef.language, ef.language, ef.language, ef.language) + string(schemaBytes)
 	
 	userCtx := map[string]interface{}{"payload": payload, "instructions": instr}
 	reqObj := map[string]interface{}{"agent": "auto", "input": "Format experience and projects:\n" + mustMarshal(userCtx)}

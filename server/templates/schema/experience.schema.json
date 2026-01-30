@@ -11,10 +11,10 @@
           "company": { "type": "string" },
           "title": { "type": "string" },
           "period": { "type": "string" },
-          "summary": { "type": "string", "minLength": 40, "maxLength": 360 },
+          "summary": { "type": "string" },
           "bullets": {
             "type": "array",
-            "items": { "type": "string", "minLength": 40, "maxLength": 210 }
+            "items": { "type": "string" }
           }
         },
         "required": ["company", "title"]
