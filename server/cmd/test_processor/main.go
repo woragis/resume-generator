@@ -88,7 +88,7 @@ func main() {
 	// create processor with real renderer and a repo wrapper (pool nil for tests)
 	r := infrastructure.NewChromedpRenderer()
 	repo := repository.NewJobsRepo(nil)
-	processor := usecase.NewProcessor(r, repo, "templates")
+	processor := usecase.NewProcessor(r, repo, "templates", "english")
 
 	// build a job with overrides
 	job := &domain.ResumeJob{

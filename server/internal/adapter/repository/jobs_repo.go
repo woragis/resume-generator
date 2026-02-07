@@ -58,6 +58,27 @@ func (r *JobsRepo) Save(ctx context.Context, j *domain.ResumeJob) error {
 		}
 	}
 
+	// Extract title: prioritize person's name from profile, fallback to job title or filename
+	title := ""
+	if j.Profile != nil {
+		if meta, ok := j.Profile["meta"].(map[string]interface{}); ok {
+			if name, ok := meta["name"].(string); ok && name != "" {
+				title = name
+			}
+		}
+	}
+	if title == "" && j.Metadata != nil {
+		if jt, ok := j.Metadata["job_title"].(string); ok && jt != "" {
+			title = jt
+		}
+	}
+	if title == "" {
+		title = fileName
+	}
+	if title == "" {
+		title = "Resume"
+	}
+
 	var extrasRaw string
 	var extrasJSON []byte
 	if j.Profile != nil {
@@ -71,10 +92,10 @@ func (r *JobsRepo) Save(ctx context.Context, j *domain.ResumeJob) error {
 		}
 	}
 
-	if _, e := r.pool.Exec(ctx, `INSERT INTO resumes (id, user_id, file_name, file_path, file_size, extras_raw, extras, created_at, updated_at)
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
-		ON CONFLICT (id) DO UPDATE SET file_name = EXCLUDED.file_name, file_path = EXCLUDED.file_path, file_size = EXCLUDED.file_size, extras_raw = EXCLUDED.extras_raw, extras = EXCLUDED.extras, updated_at = EXCLUDED.updated_at`,
-		resumeID, j.UserID, fileName, filePath, fileSize, extrasRaw, extrasJSON, j.CreatedAt, j.UpdatedAt); e != nil {
+	if _, e := r.pool.Exec(ctx, `INSERT INTO resumes (id, user_id, title, file_name, file_path, file_size, extras_raw, extras, created_at, updated_at)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+		ON CONFLICT (id) DO UPDATE SET title = EXCLUDED.title, file_name = EXCLUDED.file_name, file_path = EXCLUDED.file_path, file_size = EXCLUDED.file_size, extras_raw = EXCLUDED.extras_raw, extras = EXCLUDED.extras, updated_at = EXCLUDED.updated_at`,
+		resumeID, j.UserID, title, fileName, filePath, fileSize, extrasRaw, extrasJSON, j.CreatedAt, j.UpdatedAt); e != nil {
 		fmt.Printf("jobs_repo: unable to upsert resumes row (non-fatal): %v\n", e)
 	}
 

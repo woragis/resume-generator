@@ -168,10 +168,8 @@ func (p *Processor) Process(ctx context.Context, job *domain.ResumeJob) error {
 		synthesized := false
 		var baseResume map[string]interface{}
 
-		// Optional split AI flow: enabled by default unless explicitly
-		// disabled via AI_SPLIT_FLOW=false. When enabled we perform focused
-		// calls per-section to reduce schema drift. Otherwise fall back to
-		// the original single-call FormatResume.
+		// Staged AI flow: sequential validation and enrichment
+		// Each stage depends on previous stage success for context
 		if os.Getenv("AI_SPLIT_FLOW") != "false" {
 			// prepare payload containing aggregated and overrides
 			payload := map[string]interface{}{}
@@ -181,154 +179,74 @@ func (p *Processor) Process(ctx context.Context, job *domain.ResumeJob) error {
 				payload["aggregated"] = rawForAI
 			}
 
-			// A: experience + projects
 			if aiClient != nil {
-				if out, e := aiClient.FormatExperienceProjects(ctx, payload); e == nil && out != nil {
-					// validate against small schema
-					if err := model.ValidateMapWithSchema("templates/schema/experience.schema.json", out); err != nil {
-						fmt.Printf("processor: experience/projects validation failed: %v\n", err)
-						// attempt focused enrichment via EnrichResume to fix experience/projects
-						if aiClient != nil {
-							overrides := map[string]interface{}{}
-							if ex, ok := out["experience"]; ok { overrides["experience"] = ex }
-							if pr, ok := out["projects"]; ok { overrides["projects"] = pr }
-							if len(overrides) > 0 {
-								if enriched, enErr := aiClient.EnrichResume(ctx, resumeMap, overrides); enErr == nil && enriched != nil {
-									tmp := map[string]interface{}{}
-									if ex, ok := enriched["experience"]; ok { tmp["experience"] = ex }
-									if pr, ok := enriched["projects"]; ok { tmp["projects"] = pr }
-									if err2 := model.ValidateMapWithSchema("templates/schema/experience.schema.json", tmp); err2 == nil {
-										for k, v := range tmp { resumeMap[k] = v }
-									} else {
-										fmt.Printf("processor: experience enrichment still invalid: %v\n", err2)
-									}
-								} else {
-									fmt.Printf("processor: EnrichResume for experience failed: %v\n", enErr)
-								}
-							}
-						}
-					} else {
-						for k, v := range out {
-							resumeMap[k] = v
-						}
+				// Stage 1: Foundation (Meta)
+				fmt.Printf("processor: Stage 1 - Foundation (meta)\n")
+				val1 := Stage1Validator(resumeMap)
+				if !val1.Valid {
+					if err := Stage1Enrich(ctx, aiClient, payload, resumeMap, val1); err != nil {
+						fmt.Printf("processor: Stage 1 enrichment failed (non-fatal): %v\n", err)
+						// Stage 1 is critical; if it fails, we can't proceed with confidence
 					}
-				} else if e != nil {
-					fmt.Printf("processor: FormatExperienceProjects failed: %v\n", e)
 				}
-				// B: profile + snapshot
-				if out, e := aiClient.FormatProfileSnapshot(ctx, payload); e == nil && out != nil {
-					// validate profile snapshot small schema
-					if err := model.ValidateMapWithSchema("templates/schema/profile.schema.json", out); err != nil {
-						fmt.Printf("processor: profile/snapshot validation failed: %v\n", err)
-						// attempt focused enrichment first (EnrichFields) for snapshot/meta
-						if aiClient != nil {
-							overrides := map[string]interface{}{}
-							if ss, ok := out["snapshot"]; ok { overrides["snapshot"] = ss }
-							if mm, ok := out["meta"]; ok { overrides["meta"] = mm }
-							if len(overrides) > 0 {
-								// try targeted EnrichFields which returns only the requested keys
-								if fields, ferr := aiClient.EnrichFields(ctx, overrides); ferr == nil && fields != nil {
-									// merge returned fields into out
-									if ss, ok := fields["snapshot"]; ok { out["snapshot"] = ss }
-									if mm, ok := fields["meta"]; ok { out["meta"] = mm }
-									if err2 := model.ValidateMapWithSchema("templates/schema/profile.schema.json", out); err2 == nil {
-										for k, v := range out { resumeMap[k] = v }
-									} else {
-										fmt.Printf("processor: profile EnrichFields still invalid: %v\n", err2)
-									}
-								}
-								// fallback: broad EnrichResume
-								if enriched, enErr := aiClient.EnrichResume(ctx, resumeMap, overrides); enErr == nil && enriched != nil {
-									if ss, ok := enriched["snapshot"]; ok { out["snapshot"] = ss }
-									if mm, ok := enriched["meta"]; ok { out["meta"] = mm }
-									if err2 := model.ValidateMapWithSchema("templates/schema/profile.schema.json", out); err2 == nil {
-										for k, v := range out { resumeMap[k] = v }
-									} else {
-										fmt.Printf("processor: profile enrichment still invalid: %v\n", err2)
-									}
-								} else {
-									fmt.Printf("processor: EnrichFields/EnrichResume for profile failed: %v\n", enErr)
-								}
-							}
-						}
-					} else {
-						for k, v := range out {
-							resumeMap[k] = v
-						}
-					}
-				} else if e != nil {
-					fmt.Printf("processor: FormatProfileSnapshot failed: %v\n", e)
+				val1 = Stage1Validator(resumeMap)
+				if val1.Valid {
+					fmt.Printf("processor: Stage 1 validated ✓\n")
+				} else {
+					fmt.Printf("processor: Stage 1 still invalid after enrichment: %v\n", val1.Missing)
 				}
-				// C: publications + certifications + extras
-				if out, e := aiClient.FormatPublicationsCertsExtras(ctx, payload); e == nil && out != nil {
-					if err := model.ValidateMapWithSchema("templates/schema/publications.schema.json", out); err != nil {
-						fmt.Printf("processor: publications/certs/extras validation failed: %v\n", err)
-						// try focused enrichment via EnrichFields (targeted) or EnrichResume fallback
-						if aiClient != nil {
-							if fields, ferr := aiClient.EnrichFields(ctx, out); ferr == nil && fields != nil {
-								// validate enriched fields merged into a tmp map
-								tmp := map[string]interface{}{"publications": fields["publications"], "certifications": fields["certifications"], "extras": fields["extras"]}
-								if err2 := model.ValidateMapWithSchema("templates/schema/publications.schema.json", tmp); err2 == nil {
-									for k, v := range tmp { resumeMap[k] = v }
-								} else {
-									fmt.Printf("processor: publications enrichment still invalid: %v\n", err2)
-								}
-							} else {
-								// fallback to broad enrichment
-								if enriched, enErr := aiClient.EnrichResume(ctx, resumeMap, map[string]interface{}{"publications": out["publications"], "certifications": out["certifications"], "extras": out["extras"]}); enErr == nil && enriched != nil {
-									tmp := map[string]interface{}{}
-									if pubs, ok := enriched["publications"]; ok { tmp["publications"] = pubs }
-									if certs, ok := enriched["certifications"]; ok { tmp["certifications"] = certs }
-									if extras, ok := enriched["extras"]; ok { tmp["extras"] = extras }
-									if err2 := model.ValidateMapWithSchema("templates/schema/publications.schema.json", tmp); err2 == nil {
-										for k, v := range tmp { resumeMap[k] = v }
-									} else {
-										fmt.Printf("processor: publications broad enrichment still invalid: %v\n", err2)
-									}
-								} else {
-									fmt.Printf("processor: EnrichFields/EnrichResume for publications failed: %v\n", ferr)
-								}
-							}
-						}
-					} else {
-						for k, v := range out {
-							resumeMap[k] = v
-						}
+
+				// Stage 2: Professional History (Experience)
+				fmt.Printf("processor: Stage 2 - Professional History (experience)\n")
+				val2 := Stage2Validator(resumeMap)
+				if !val2.Valid {
+					if err := Stage2Enrich(ctx, aiClient, payload, resumeMap, val2); err != nil {
+						fmt.Printf("processor: Stage 2 enrichment failed (non-fatal): %v\n", err)
 					}
-				} else if e != nil {
-					fmt.Printf("processor: FormatPublicationsCertsExtras failed: %v\n", e)
 				}
-				// D: summary + meta polish (final harmonization)
-				// assemble a lightweight assembled payload to give context
-				assembled := map[string]interface{}{"assembled": resumeMap, "aggregated": payload["aggregated"]}
-				if out, e := aiClient.FormatSummaryMeta(ctx, assembled); e == nil && out != nil {
-					// handle summary (respect length) and merge meta rather than overwrite
-					if s, ok := out["summary"].(string); ok {
-						if len(s) < 80 || len(s) > 220 {
-							fmt.Printf("processor: summary length out of bounds: %d\n", len(s))
-						} else {
-							resumeMap["summary"] = s
-						}
+				val2 = Stage2Validator(resumeMap)
+				if val2.Valid {
+					fmt.Printf("processor: Stage 2 validated ✓\n")
+				} else {
+					fmt.Printf("processor: Stage 2 still invalid after enrichment: %v\n", val2.Missing)
+				}
+
+				// Stage 3: Showcase Content (Projects, Publications, Certifications)
+				fmt.Printf("processor: Stage 3 - Showcase Content (projects, publications, certs)\n")
+				val3 := Stage3Validator(resumeMap)
+				if !val3.Valid {
+					if err := Stage3Enrich(ctx, aiClient, payload, resumeMap, val3); err != nil {
+						fmt.Printf("processor: Stage 3 enrichment failed (non-fatal): %v\n", err)
 					}
-					// merge meta fields into existing meta, preserving name if present
-					if metaRaw, ok := out["meta"].(map[string]interface{}); ok {
-						metaObj := map[string]interface{}{}
-						if m, ok2 := resumeMap["meta"].(map[string]interface{}); ok2 {
-							for k, v := range m { metaObj[k] = v }
-						}
-						for k, v := range metaRaw {
-							if k == "name" {
-								if _, has := metaObj["name"]; !has || metaObj["name"] == "" {
-									metaObj["name"] = v
-								}
-							} else {
-								metaObj[k] = v
-							}
-						}
-						resumeMap["meta"] = metaObj
+				}
+				val3 = Stage3Validator(resumeMap)
+				if val3.Valid {
+					fmt.Printf("processor: Stage 3 validated ✓\n")
+				} else {
+					fmt.Printf("processor: Stage 3 still invalid after enrichment: %v\n", val3.Missing)
+				}
+
+				// Stage 4: Synthesis (Summary, Extras, Final Polish)
+				fmt.Printf("processor: Stage 4 - Synthesis (summary, extras)\n")
+				val4 := Stage4Validator(resumeMap)
+				if !val4.Valid {
+					if err := Stage4Enrich(ctx, aiClient, payload, resumeMap, val4); err != nil {
+						fmt.Printf("processor: Stage 4 enrichment failed (non-fatal): %v\n", err)
 					}
-				} else if e != nil {
-					fmt.Printf("processor: FormatSummaryMeta failed: %v\n", e)
+				}
+				val4 = Stage4Validator(resumeMap)
+				if val4.Valid {
+					fmt.Printf("processor: Stage 4 validated ✓\n")
+				} else {
+					fmt.Printf("processor: Stage 4 still invalid after enrichment: %v\n", val4.Missing)
+				}
+
+				// Log overall completion status
+				allValid := val1.Valid && val2.Valid && val3.Valid && val4.Valid
+				if allValid {
+					fmt.Printf("processor: All stages validated successfully\n")
+				} else {
+					fmt.Printf("processor: WARNING - Some stages failed validation\n")
 				}
 			}
 			// keep baseResume as a snapshot for targeted merges later
