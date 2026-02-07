@@ -8,6 +8,7 @@ import (
 
 	httpadapter "resume-generator/internal/adapter/http"
 	repo "resume-generator/internal/adapter/repository"
+	"resume-generator/internal/infrastructure/migration"
 	"resume-generator/internal/usecase"
 	infra "resume-generator/pkg/infrastructure"
 
@@ -27,6 +28,13 @@ func main() {
 	jobsPool, err := infra.NewJobsPool(ctx)
 	if err != nil {
 		log.Printf("warning: jobs DB not available: %v", err)
+	}
+
+	// Run database migrations
+	if jobsPool != nil {
+		if err := migration.RunMigrations(ctx, jobsPool); err != nil {
+			log.Printf("warning: database migrations failed: %v", err)
+		}
 	}
 
 	renderer := infra.NewChromedpRenderer()
